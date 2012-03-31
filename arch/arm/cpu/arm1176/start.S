@@ -51,7 +51,7 @@
 
 .globl _start
 _start: b	reset
-#ifndef CONFIG_NAND_SPL
+#ifndef CONFIG_SPL_BUILD
 	ldr	pc, _undefined_instruction
 	ldr	pc, _software_interrupt
 	ldr	pc, _prefetch_abort
@@ -98,7 +98,7 @@ _end_vect:
 
 .globl _TEXT_BASE
 _TEXT_BASE:
-	.word	CONFIG_SYS_TEXT_BASE
+	.word	CONFIG_SYS_TEXT_BASE	/* 运行时地址 */
 
 /*
  * Below variable is very important because we use MMU in U-Boot.
@@ -106,7 +106,7 @@ _TEXT_BASE:
  * by scsuh.
  */
 _TEXT_PHY_BASE:
-	.word	CONFIG_SYS_PHY_UBOOT_BASE
+	.word	CONFIG_SYS_PHY_UBOOT_BASE	/* 运行时物理地址 */
 
 /*
  * These are defined in the board-specific linker script.
@@ -164,7 +164,7 @@ cpu_init_crit:
 	 * When booting from NAND - it has definitely been a reset, so, no need
 	 * to flush caches and disable the MMU
 	 */
-#ifndef CONFIG_NAND_SPL
+#ifndef CONFIG_SPL_BUILD
 	/*
 	 * flush v4 I/D caches
 	 */
@@ -250,11 +250,14 @@ relocate_code:
 stack_setup:
 	mov	sp, r4
 
-	adr	r0, _start
+	adr	r0, _start		/* r0 <- 加载时起始地址,应该就是链接地址 */
 	cmp	r0, r6
 	beq	clear_bss		/* skip relocation */
+
+	/* r1 <- 要拷贝到的地址 */
 	mov	r1, r6			/* r1 <- scratch for copy_loop */
 	ldr	r3, _bss_start_ofs
+	/* r2 <- 加载时结束地址 */
 	add	r2, r0, r3		/* r2 <- source end address	    */
 
 copy_loop:
@@ -267,14 +270,14 @@ copy_loop:
 	/*
 	 * fix .rel.dyn relocations
 	 */
-	ldr	r0, _TEXT_BASE		/* r0 <- Text base */
+	ldr	r0, _TEXT_BASE		/* r0 <- Text base */ /* 运行时地址 */
 	sub	r9, r6, r0		/* r9 <- relocation offset */
 	ldr	r10, _dynsym_start_ofs	/* r10 <- sym table ofs */
-	add	r10, r10, r0		/* r10 <- sym table in FLASH */
+	add	r10, r10, r0		/* r10 <- sym table in FLASH */ /* 运行时地址 */
 	ldr	r2, _rel_dyn_start_ofs	/* r2 <- rel dyn start ofs */
-	add	r2, r2, r0		/* r2 <- rel dyn start in FLASH */
+	add	r2, r2, r0		/* r2 <- rel dyn start in FLASH */ /* r2 -> rel dyn start运行时地址 */
 	ldr	r3, _rel_dyn_end_ofs	/* r3 <- rel dyn end ofs */
-	add	r3, r3, r0		/* r3 <- rel dyn end in FLASH */
+	add	r3, r3, r0		/* r3 <- rel dyn end in FLASH */ /* r3 -> rel dyn end运行时地址 */
 fixloop:
 	ldr	r0, [r2]		/* r0 <- location to fix up, IN FLASH! */
 	add	r0, r0, r9		/* r0 <- location to fix up in RAM */
@@ -285,7 +288,14 @@ fixloop:
 	cmp	r7, #2			/* absolute fixup? */
 	beq	fixabs
 	/* ignore unknown type of fixup */
+#if 0
+	add r2, r2, #8
+	cmp r2, r3
+	blo fixloop
+	b fixend
+#else
 	b	fixnext
+#endif
 fixabs:
 	/* absolute fix: set location to (offset) symbol value */
 	mov	r1, r1, LSR #4		/* r1 <- symbol index in .dynsym */
@@ -302,6 +312,7 @@ fixnext:
 	add	r2, r2, #8		/* each rel.dyn entry is 8 bytes */
 	cmp	r2, r3
 	blo	fixloop
+fixend:
 #endif
 
 #ifdef CONFIG_ENABLE_MMU
@@ -356,20 +367,18 @@ clbss_l:str	r2, [r0]		/* clear loop...		    */
 	cmp	r0, r1
 	bne	clbss_l
 
-#ifndef CONFIG_NAND_SPL
 	bl coloured_LED_init
 	bl red_led_on
-#endif
 #endif
 
 /*
  * We are done. Do not return, instead branch to second part of board
  * initialization, now running from RAM.
  */
-#ifdef CONFIG_NAND_SPL
-	ldr     pc, _nand_boot
+#ifdef CONFIG_SPL_BUILD
+	ldr		pc, _spl_boot
 
-_nand_boot: .word nand_boot
+_spl_boot: .word spl_boot
 #else
 	ldr	r0, _board_init_r_ofs
 	adr	r1, _start
@@ -397,7 +406,7 @@ _mmu_table_base:
 	.word mmu_table
 #endif
 
-#ifndef CONFIG_NAND_SPL
+#ifndef CONFIG_SPL_BUILD
 /*
  * we assume that cache operation is done before. (eg. cleanup_before_linux())
  * actually, we don't need to do anything about cache if not use d-cache in
@@ -575,4 +584,4 @@ fiq:
 	get_bad_stack
 	bad_save_user_regs
 	bl	do_fiq
-#endif /* CONFIG_NAND_SPL */
+#endif /* CONFIG_SPL_BUILD */

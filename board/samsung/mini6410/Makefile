@@ -1,5 +1,5 @@
 #
-# (C) Copyright 2000-2003
+# (C) Copyright 2000, 2001, 2002
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
 #
 # (C) Copyright 2008
@@ -26,20 +26,20 @@
 
 include $(TOPDIR)/config.mk
 
-LIB	= $(obj)lib$(SOC).o
+LIB	= $(obj)lib$(BOARD).o
 
-SOBJS	= reset.o
+COBJS-y	:= mini6410.o
+SOBJS	:= lowlevel_init.o
 
-COBJS-$(CONFIG_S3C6400)	+= cpu_init.o speed.o
-COBJS-$(CONFIG_S3C6410)	+= cpu_init.o speed.o
-COBJS-y	+= timer.o
+SPLOBJS	:= mini6410_spl.o
 
-OBJS	:= $(addprefix $(obj),$(SOBJS) $(COBJS-y))
+SRCS    := $(SOBJS:.o=.S) $(COBJS-y:.o=.c) $(SPLOBJS:.o=.c)
+OBJS	:= $(addprefix $(obj),$(COBJS-y))
+SOBJS	:= $(addprefix $(obj),$(SOBJS))
+SPLOBJS	:= $(addprefix $(obj),$(SPLOBJS))
 
-all:	$(obj).depend $(START) $(LIB)
-
-$(LIB):	$(OBJS)
-	$(call cmd_link_o_target, $(OBJS))
+$(LIB):	$(obj).depend $(SOBJS) $(OBJS) $(SPLOBJS)
+	$(call cmd_link_o_target, $(SOBJS) $(OBJS))
 
 #########################################################################
 
