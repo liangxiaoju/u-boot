@@ -145,7 +145,7 @@ static int fastboot_bind(struct usb_gadget *gadget)
 
 	fdev->req->complete = fastboot_setup_complete;
 
-	if (!gadget->is_dualspeed)
+	if (gadget->speed != USB_SPEED_HIGH)
 		fastboot_device_desc.bcdUSB = __constant_cpu_to_le16(0x0110);
 
 	fastboot_device_desc.bMaxPacketSize0 = gadget->ep0->maxpacket;
@@ -259,7 +259,7 @@ static void fastboot_disconnect(struct usb_gadget *gadget)
 	debug("%s\n", __func__);
 }
 
-static struct usb_gadget_driver fastboot_gadget_driver = {
+static const struct usb_gadget_driver fastboot_gadget_driver = {
 	.speed		= USB_SPEED_HIGH,
 	.bind		= fastboot_bind,
 	.unbind		= fastboot_unbind,
@@ -278,6 +278,8 @@ static int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 	while (!ctrlc()) {
 		usb_gadget_handle_interrupts();
 	}
+
+	usb_gadget_unregister_driver(&fastboot_gadget_driver);
 
 	return 0;
 }

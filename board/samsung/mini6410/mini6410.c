@@ -81,11 +81,16 @@ static struct s3c_plat_otg_data s3c_otg_pdata = {
 	.usb_flags		= 0,
 };
 
+#ifdef CONFIG_BOARD_LATE_INIT
+int board_late_init(void)
+{
+	return s3c_udc_probe(&s3c_otg_pdata);
+}
+#endif
+
 int board_init(void)
 {
 	cs8900_pre_init();
-
-	s3c_udc_probe(&s3c_otg_pdata);
 
 	/* NOR-flash in SROM0 */
 

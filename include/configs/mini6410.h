@@ -280,6 +280,7 @@
 #define CONFIG_USB_GADGET_S3C_UDC_OTG
 #define CONFIG_SYS_CACHELINE_SIZE	32
 #define CONFIG_CMD_FASTBOOT
+#define CONFIG_BOARD_LATE_INIT
 
 /* Settings as above boot configuration */
 #define CONFIG_ENV_IS_IN_NAND

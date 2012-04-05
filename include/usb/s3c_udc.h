@@ -120,13 +120,13 @@ extern struct s3c_udc *the_controller;
 #endif
 
 #ifdef DEBUG_S3C_UDC_SETUP
-#define DEBUG_SETUP(fmt, args...) printk(fmt, ##args)
+#define DEBUG_SETUP(fmt, args...) printf(fmt, ##args)
 #else
 #define DEBUG_SETUP(fmt, args...) do {} while (0)
 #endif
 
 #ifdef DEBUG_S3C_UDC_EP0
-#define DEBUG_EP0(fmt, args...) printk(fmt, ##args)
+#define DEBUG_EP0(fmt, args...) printf(fmt, ##args)
 #else
 #define DEBUG_EP0(fmt, args...) do {} while (0)
 #endif
@@ -138,7 +138,7 @@ extern struct s3c_udc *the_controller;
 #endif
 
 #ifdef DEBUG_S3C_UDC_OUT_EP
-#define DEBUG_OUT_EP(fmt, args...) printk(fmt, ##args)
+#define DEBUG_OUT_EP(fmt, args...) printf(fmt, ##args)
 #else
 #define DEBUG_OUT_EP(fmt, args...) do {} while (0)
 #endif
