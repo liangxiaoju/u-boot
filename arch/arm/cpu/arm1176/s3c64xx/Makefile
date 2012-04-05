@@ -34,10 +34,6 @@ COBJS-$(CONFIG_S3C6400)	+= cpu_init.o speed.o
 COBJS-$(CONFIG_S3C6410)	+= cpu_init.o speed.o
 COBJS-y	+= timer.o
 
-ifndef CONFIG_SPL_BUILD
-COBJS-y	+= usb/usbd-otg-hs.o 
-endif
-
 OBJS	:= $(addprefix $(obj),$(SOBJS) $(COBJS-y))
 
 all:	$(obj).depend $(START) $(LIB)
