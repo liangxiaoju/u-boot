@@ -31,6 +31,7 @@ static char product_desc[] = "mini6410";
 static char config_desc[] = "x";
 static char intf_desc[] = "x";
 static char serial_number[] = "12345";
+static int enum_complete = 0;
 
 static struct usb_string fastboot_strings[] = {
 	{ STRING_MANUFACTURER,	manufacturer, },
@@ -112,7 +113,6 @@ struct usb_endpoint_descriptor fastboot_endpout_desc = {
 };
 
 static const struct usb_descriptor_header *fastboot_desc_header[] = {
-	(struct usb_descriptor_header *) &fastboot_config_desc,
 	(struct usb_descriptor_header *) &fastboot_intf_desc,
 	(struct usb_descriptor_header *) &fastboot_endpin_desc,
 	(struct usb_descriptor_header *) &fastboot_endpout_desc,
@@ -226,6 +226,9 @@ static int fastboot_setup(struct usb_gadget *gadget, const struct usb_ctrlreques
 			if (value >= 0)
 				value = min(wLength, (u16)value);
 			break;
+		default:
+			printf("UNKNOWN DT\n");
+			break;
 		}
 		break;
 	case USB_REQ_SET_CONFIGURATION:
@@ -236,6 +239,9 @@ static int fastboot_setup(struct usb_gadget *gadget, const struct usb_ctrlreques
 		printf("USB_REQ_GET_CONFIGURATION\n");
 		value = min(wLength, (u16)1);
 		memcpy(buf, &fastboot_config_desc.bConfigurationValue, value);
+		break;
+	default:
+		printf("UNKNOWN REQ\n");
 		break;
 	}
 
@@ -275,8 +281,11 @@ static int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 	if (ret < 0)
 		return -1;
 
-	while (!ctrlc()) {
+	while (!ctrlc() && !enum_complete) {
 		usb_gadget_handle_interrupts();
+	}
+
+	while (!ctrlc()) {
 	}
 
 	usb_gadget_unregister_driver(&fastboot_gadget_driver);
