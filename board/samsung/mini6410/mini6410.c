@@ -31,6 +31,8 @@
 #include <common.h>
 #include <netdev.h>
 #include <asm/arch/s3c6400.h>
+#include <asm/io.h>
+#include <usb/s3c_udc.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -63,9 +65,27 @@ static void cs8900_pre_init(void)
 			(CS8900_Tah << 8) + (CS8900_Tacp << 4) + CS8900_PMC);
 }
 
+static int s3c_otg_phy_control(int on)
+{
+	if (on)
+		writel(readl(OTHERS) | (1<<16), OTHERS);
+	else
+		writel(readl(OTHERS) & (~(1<<16)), OTHERS);
+}
+
+static struct s3c_plat_otg_data s3c_otg_pdata = {
+	.phy_control	= s3c_otg_phy_control,
+	.regs_phy		= 0x7c100000,
+	.regs_otg		= 0x7c000000,
+	.usb_phy_ctrl	= 0x7c000e00,
+	.usb_flags		= 0,
+};
+
 int board_init(void)
 {
 	cs8900_pre_init();
+
+	s3c_udc_probe(&s3c_otg_pdata);
 
 	/* NOR-flash in SROM0 */
 

@@ -44,7 +44,10 @@
 #include <asm/io.h>
 
 #include <asm/mach-types.h>
+
+#ifndef CONFIG_S3C6410
 #include <asm/arch/gpio.h>
+#endif
 
 #include "regs-otg.h"
 #include <usb/lin_gadget_compat.h>
@@ -150,6 +153,11 @@ static struct usb_ep_ops s3c_ep_ops = {
 #define create_proc_files() do {} while (0)
 #define remove_proc_files() do {} while (0)
 
+#ifdef CONFIG_S3C6410
+#define invalidate_dcache_range(a,b)	do {} while (0)
+#define flush_dcache_range(a,b)			do {} while (0)
+#endif
+
 /***********************************************************/
 
 void __iomem		*regs_otg;
@@ -175,8 +183,13 @@ void otg_phy_init(struct s3c_udc *dev)
 		writel((readl(&phy->phypwr) &~(OTG_DISABLE_0 | ANALOG_PWRDOWN)
 			&~FORCE_SUSPEND_0), &phy->phypwr);
 
+#ifdef CONFIG_S3C6410
+	writel((readl(&phy->phyclk) &~(ID_PULLUP0 | COMMON_ON_N0)) |
+	       CLK_SEL_48MHZ, &phy->phyclk); /* PLL 48Mhz */
+#else
 	writel((readl(&phy->phyclk) &~(ID_PULLUP0 | COMMON_ON_N0)) |
 	       CLK_SEL_24MHZ, &phy->phyclk); /* PLL 24Mhz */
+#endif
 
 	writel((readl(&phy->rstcon) &~(LINK_SW_RST | PHYLNK_SW_RST))
 	       | PHY_SW_RST0, &phy->rstcon);
