@@ -163,6 +163,7 @@ endif
 COBJS-$(CONFIG_CMD_XIMG) += cmd_ximg.o
 COBJS-$(CONFIG_YAFFS2) += cmd_yaffs2.o
 COBJS-$(CONFIG_CMD_DNW)	+= cmd_dnw.o
+COBJS-$(CONFIG_CMD_FASTBOOT) += cmd_fastboot.o
 
 # others
 ifdef CONFIG_DDR_SPD
