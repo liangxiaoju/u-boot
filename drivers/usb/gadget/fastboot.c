@@ -13,10 +13,18 @@
 
 #define DEBUG
 #ifdef DEBUG
+#undef debug
 #define debug(fmt, args...) printf(fmt, ##args)
 #else
 #define debug(fmt, args...) do {} while (0)
 #endif
+
+typedef int (*fastboot_handle_t)(const char *cmd);
+
+typedef struct {
+	char *lable;
+	fastboot_handle_t handle;
+} fastboot_func_t;
 
 typedef struct fastboot_dev {
 	struct usb_gadget *gadget;
@@ -29,10 +37,10 @@ typedef struct fastboot_dev {
 
 static char manufacturer[] = "U-Boot";
 static char product_desc[] = "mini6410";
-static char config_desc[] = "x";
-static char intf_desc[] = "x";
+static char config_desc[] = "update-by-usb";
+static char intf_desc[] = "fastboot";
 static char serial_number[] = "12345";
-static int enum_complete = 0;
+
 static struct fastboot_dev *pfdev;
 
 static struct usb_string fastboot_strings[] = {
@@ -127,23 +135,49 @@ static void fastboot_recv_complete(struct usb_ep *ep, struct usb_request *req)
 	recv_complete = 1;
 }
 
-int fastboot_recv(void *buf)
+static int fastboot_recv(void *buf, int len)
 {
 	struct fastboot_dev *fdev = pfdev;
+	int ret;
 
-	fdev->recv_req->length = fdev->epout_bulk->maxpacket;
+	fdev->recv_req->length = len;
 	fdev->recv_req->complete = fastboot_recv_complete;
-	usb_ep_queue(fdev->epout_bulk, fdev->recv_req, 0);
+	ret = usb_ep_queue(fdev->epout_bulk, fdev->recv_req, 0);
+	if (ret)
+		return -1;
 
 	recv_complete = 0;
 	while (!ctrlc() && !recv_complete) {
 		usb_gadget_handle_interrupts();
 	}
-	recv_complete = 0;
 
 	memcpy(buf, fdev->recv_req->buf, fdev->recv_req->actual);
 
 	return fdev->recv_req->actual;
+}
+
+int fastboot_recvs(void *buf, int len)
+{
+	struct fastboot_dev *fdev = pfdev;
+	int amount_left_to_recv = len;
+	int maxpacket = fdev->epin_bulk->maxpacket;
+	int amount, actual;
+
+	while (amount_left_to_recv > 0) {
+		amount = min(len, maxpacket);
+		actual = fastboot_recv(buf, amount);
+		if (actual < 0)
+			return -1;
+
+		amount_left_to_recv -= actual;
+		buf += actual;
+
+		/* XXX finish ? */
+		if (actual < amount)
+			return len - amount_left_to_recv;
+	}
+
+	return len;
 }
 
 static int send_complete;
@@ -152,27 +186,218 @@ static void fastboot_send_complete(struct usb_ep *ep, struct usb_request *req)
 	send_complete = 1;
 }
 
-int fastboot_send(const void *buf, int len)
+static int fastboot_send(const void *buf, int len)
 {
 	struct fastboot_dev *fdev = pfdev;
+	int ret;
 
 	fdev->send_req->length = len;
 	fdev->send_req->complete = fastboot_send_complete;
 	memcpy(fdev->send_req->buf, buf, len);
-	usb_ep_queue(fdev->epin_bulk, fdev->send_req, 0);
+	ret = usb_ep_queue(fdev->epin_bulk, fdev->send_req, 0);
+	if (ret)
+		return -1;
 
 	send_complete = 0;
 	while (!ctrlc() && !send_complete) {
 		usb_gadget_handle_interrupts();
 	}
-	send_complete = 0;
 
+	/* XXX: what if actual != len */
 	return fdev->send_req->actual;
+}
+
+int fastboot_sends(const void *buf, int len)
+{
+	struct fastboot_dev *fdev = pfdev;
+	int amount_left_to_send = len;
+	int maxpacket = fdev->epin_bulk->maxpacket;
+	int amount, actual;
+
+	while (amount_left_to_send > 0) {
+		amount = min(len, maxpacket);
+		actual = fastboot_send(buf, amount);
+		if (actual < 0)
+			return -1;
+
+		amount_left_to_send -= actual;
+		buf += actual;
+	}
+
+	return len;
+}
+
+static int fastboot_default(const char *cmd)
+{
+	char status[64];
+
+	debug("fastboot %s.\n", cmd);
+
+	sprintf(status, "OKAY");
+	fastboot_sends(status, sizeof(status));
+
+	return 0;
+}
+
+static int fastboot_reboot(const char *cmd)
+{
+	char status[64];
+
+	debug("fastboot reboot.\n");
+	run_command("reset", 0);
+
+	sprintf(status, "OKAY");
+	fastboot_sends(status, sizeof(status));
+
+	return 0;
+}
+
+static int fastboot_reboot_bootloader(const char *cmd)
+{
+	char status[64];
+
+	debug("fastboot reboot-bootloader.\n");
+
+	sprintf(status, "OKAY");
+	fastboot_sends(status, sizeof(status));
+
+	return 0;
+}
+
+static int fastboot_continue(const char *cmd)
+{
+	char status[64];
+
+	debug("fastboot continue.\n");
+
+	sprintf(status, "OKAY");
+	fastboot_sends(status, sizeof(status));
+
+	return 0;
+}
+
+static void *fastboot_buffer_addr = (void *)0x50000000;
+static int fastboot_download(const char *cmd)
+{
+	char status[64];
+	unsigned size = simple_strtoul(cmd + 9, NULL, 16);
+	int ret;
+
+	debug("fastboot download(%d).\n", size);
+
+	sprintf(status, "DATA%08x", size);
+	fastboot_sends(status, sizeof(status));
+
+	ret = fastboot_recvs(fastboot_buffer_addr, size);
+	if (ret != size) {
+		printf("Error: Downloaded %d bytes of %d bytes.\n", ret, size);
+		sprintf(status, "FAIL");
+		return -1;
+	}
+
+	sprintf(status, "OKAY");
+	fastboot_sends(status, sizeof(status));
+
+	return 0;
+}
+
+static int fastboot_flash(const char *cmd)
+{
+	char status[64];
+	const char *part = cmd + 6;
+
+	debug("fastboot flash %s.\n", part);
+
+	sprintf(status, "OKAY");
+	fastboot_sends(status, sizeof(status));
+
+	return 0;
+}
+
+static int fastboot_erase(const char *cmd)
+{
+	char status[64];
+	const char *part = cmd + 6;
+
+	debug("fastboot erase %s.\n", part);
+
+	sprintf(status, "OKAY");
+	fastboot_sends(status, sizeof(status));
+
+	return 0;
+}
+
+static int fastboot_oem(const char *cmd)
+{
+	char status[64];
+
+	debug("fastboot %s.\n", cmd);
+
+	sprintf(status, "OKAY");
+	fastboot_sends(status, sizeof(status));
+
+	return 0;
+}
+
+fastboot_func_t fastboot_func[] = {
+	{ "default",			fastboot_default },
+	{ "reboot",				fastboot_reboot },
+	{ "reboot-bootloader",	fastboot_reboot_bootloader },
+	{ "continue",			fastboot_continue },
+	{ "download",			fastboot_download },
+	{ "flash",				fastboot_flash },
+	{ "erase",				fastboot_erase },
+	{ "oem",				fastboot_oem },
+};
+
+fastboot_handle_t fastboot_find_item(const void *cmd)
+{
+	char *lable;
+	int i, len;
+
+	for (i = 0; i < sizeof(fastboot_func); i++) {
+		lable = fastboot_func[i].lable;
+		len = strlen(lable);
+		if (!strncmp(lable, cmd, len))
+			return fastboot_func[i].handle;
+	}
+
+	return NULL;
+}
+
+int fastboot_run(void)
+{
+	char cmd[64];
+	int len, ret;
+	fastboot_handle_t handle;
+
+	while (!ctrlc()) {
+		len = fastboot_recvs(cmd, sizeof(cmd));
+		if (len < 0)
+			return -1;
+
+		handle = fastboot_find_item(cmd);
+		if (!handle)
+			printf("Failed to find handle [fastboot %s]\n", cmd);
+
+		ret = handle(cmd);
+		if (ret < 0)
+			printf("Failed to handle [fastboot %s]\n", cmd);
+	}
+
+	return 0;
 }
 
 static void fastboot_setup_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	debug("%s\n", __func__);
+}
+
+static int enum_complete = 0;
+static void fastboot_enum_complete(struct usb_ep *ep, struct usb_request *req)
+{
+	debug("%s\n", __func__);
+	enum_complete = 1;
 }
 
 static int fastboot_bind(struct usb_gadget *gadget)
@@ -260,29 +485,31 @@ static int fastboot_setup(struct usb_gadget *gadget, const struct usb_ctrlreques
 	struct fastboot_dev *fdev = get_gadget_data(gadget);
 	struct usb_request *req = fdev->req;
 	void *buf = req->buf;
-	u16 wIndex = le16_to_cpu(ctrl->wIndex);
+//	u16 wIndex = le16_to_cpu(ctrl->wIndex);
 	u16 wValue = le16_to_cpu(ctrl->wValue);
 	u16 wLength = le16_to_cpu(ctrl->wLength);
 	int value = -1;
 	int type;
 
+	req->complete = fastboot_setup_complete;
+
 	switch (ctrl->bRequest) {
 	case USB_REQ_GET_DESCRIPTOR:
-		printf("USB_REQ_GET_DESCRIPTOR\n");
+		debug("USB_REQ_GET_DESCRIPTOR\n");
 		if (ctrl->bRequestType != USB_DIR_IN)
 			break;
 		type = wValue >> 8;
 		switch (type) {
 		case USB_DT_DEVICE:
-			printf("USB_DT_DEVICE\n");
+			debug("USB_DT_DEVICE(wLength=%d)\n", wLength);
 			value = min(wLength, USB_DT_DEVICE_SIZE);
 			memcpy(buf, &fastboot_device_desc, value);
 			break;
 		case USB_DT_OTHER_SPEED_CONFIG:
-			printf("USB_DT_OTHER_SPEED_CONFIG\n");
+			debug("USB_DT_OTHER_SPEED_CONFIG\n");
 			break;
 		case USB_DT_CONFIG:
-			printf("USB_DT_CONFIG(%d)\n", wLength);
+			debug("USB_DT_CONFIG(wLength=%d)\n", wLength);
 			value = usb_gadget_config_buf(
 					&fastboot_config_desc, buf,
 					gadget->ep0->maxpacket, fastboot_desc_header);
@@ -291,28 +518,29 @@ static int fastboot_setup(struct usb_gadget *gadget, const struct usb_ctrlreques
 				value = min(wLength, (u16)value);
 			break;
 		case USB_DT_STRING:
-			printf("USB_DT_STRING\n");
+			debug("USB_DT_STRING(index=%d)\n", wValue & 0xff);
 			value = usb_gadget_get_string(&stringtab,
 					wValue & 0xff, buf);
 			if (value >= 0)
 				value = min(wLength, (u16)value);
 			break;
 		default:
-			printf("UNKNOWN DT\n");
+			debug("UNKNOWN DT\n");
 			break;
 		}
 		break;
 	case USB_REQ_SET_CONFIGURATION:
-		printf("USB_REQ_SET_CONFIGURATION\n");
+		debug("USB_REQ_SET_CONFIGURATION(wValue%d)\n", wValue);
 		value = 0;
+		req->complete = fastboot_enum_complete;
 		break;
 	case USB_REQ_GET_CONFIGURATION:
-		printf("USB_REQ_GET_CONFIGURATION\n");
+		debug("USB_REQ_GET_CONFIGURATION\n");
 		value = min(wLength, (u16)1);
 		memcpy(buf, &fastboot_config_desc.bConfigurationValue, value);
 		break;
 	default:
-		printf("UNKNOWN REQ\n");
+		debug("UNKNOWN REQ\n");
 		break;
 	}
 
