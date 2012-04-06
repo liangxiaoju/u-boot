@@ -2,6 +2,7 @@
 #include <command.h>
 
 extern int fastboot_init(void);
+extern int fastboot_run(void);
 extern void fastboot_exit(void);
 
 static int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
@@ -12,9 +13,7 @@ static int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 	if (ret < 0)
 		return ret;
 
-	while (!ctrlc()) {
-		;
-	}
+	fastboot_run();
 
 	fastboot_exit();
 
