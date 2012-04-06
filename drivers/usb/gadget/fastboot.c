@@ -13,6 +13,7 @@
 
 #define DEBUG
 #ifdef DEBUG
+#undef debug
 #define debug(fmt, args...) printf(fmt, ##args)
 #else
 #define debug(fmt, args...) do {} while (0)
@@ -272,7 +273,7 @@ static int fastboot_continue(const char *cmd)
 	debug("fastboot continue.\n");
 
 	sprintf(status, "OKAY");
-	fastboot_sends(status, strlen(status));
+	fastboot_sends(status, sizeof(status));
 
 	return 0;
 }
