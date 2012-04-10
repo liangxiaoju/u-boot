@@ -1,15 +1,17 @@
 #include <common.h>
 #include <malloc.h>
 #include <asm/errno.h>
+#include <asm/io.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 #include <usb/lin_gadget_compat.h>
+#include "regs-otg.h"
 
 #define STRING_MANUFACTURER		1
 #define STRING_PRODUCT			2
-#define STRING_CONFIG			3
-#define STRING_INTF				4
-#define STRING_SERIALNUMBER		5
+#define STRING_CONFIG			0
+#define STRING_INTF				0
+#define STRING_SERIALNUMBER		0
 
 #define DEBUG
 #ifdef DEBUG
@@ -69,7 +71,7 @@ static struct usb_device_descriptor fastboot_device_desc = {
 	.bMaxPacketSize0	= 64,
 	.idVendor			= __constant_cpu_to_le16(0x18d1),
 	.idProduct			= __constant_cpu_to_le16(0x0002),
-	.bcdDevice			= __constant_cpu_to_le16(0x1234),
+	.bcdDevice			= __constant_cpu_to_le16(0x0100),
 	.iManufacturer		= STRING_MANUFACTURER,
 	.iProduct			= STRING_PRODUCT,
 	.iSerialNumber		= STRING_SERIALNUMBER,
@@ -79,8 +81,9 @@ static struct usb_device_descriptor fastboot_device_desc = {
 static const struct usb_config_descriptor fastboot_config_desc = {
 	.bLength			= USB_DT_CONFIG_SIZE,
 	.bDescriptorType	= USB_DT_CONFIG,
-	.wTotalLength		= USB_DT_CONFIG_SIZE + USB_DT_INTERFACE_SIZE +
-							USB_DT_ENDPOINT_SIZE * 2,
+	.wTotalLength		= __constant_cpu_to_le16(
+			USB_DT_CONFIG_SIZE + USB_DT_INTERFACE_SIZE +
+			USB_DT_ENDPOINT_SIZE * 2),
 	.bNumInterfaces		= 1,
 	.bConfigurationValue= 1,//used by set_configuration
 	.iConfiguration		= STRING_CONFIG,
@@ -136,7 +139,7 @@ static void fastboot_recv_complete(struct usb_ep *ep, struct usb_request *req)
 	recv_complete = 1;
 }
 
-static int fastboot_recv(void *buf, int len)
+int fastboot_recv(void *buf, int len)
 {
 	struct fastboot_dev *fdev = pfdev;
 	int ret;
@@ -188,14 +191,19 @@ static void fastboot_send_complete(struct usb_ep *ep, struct usb_request *req)
 	send_complete = 1;
 }
 
-static int fastboot_send(const void *buf, int len)
+int fastboot_send(const void *buf, int len)
 {
 	struct fastboot_dev *fdev = pfdev;
 	int ret;
 
+	usb_gadget_handle_interrupts();
+	usb_gadget_handle_interrupts();
+
 	fdev->send_req->length = len;
 	fdev->send_req->complete = fastboot_send_complete;
 	memcpy(fdev->send_req->buf, buf, len);
+//	writel(1u<<31|1<<26|2<<18|1<<15|1<<11|512<<0, 0x7c000900+0x20*1);
+
 	ret = usb_ep_queue(fdev->epin_bulk, fdev->send_req, 0);
 	if (ret)
 		return -1;
@@ -433,8 +441,8 @@ static int fastboot_bind(struct usb_gadget *gadget)
 		goto err;
 
 	fdev->req->buf = malloc(gadget->ep0->maxpacket);
-	fdev->recv_req->buf = malloc(fdev->epout_bulk->maxpacket);
-	fdev->send_req->buf = malloc(fdev->epin_bulk->maxpacket);
+	fdev->recv_req->buf = malloc(512/*fdev->epout_bulk->maxpacket*/);
+	fdev->send_req->buf = malloc(512/*fdev->epin_bulk->maxpacket*/);
 	if (!fdev->req->buf || !fdev->recv_req->buf || !fdev->send_req->buf)
 		goto err;
 
