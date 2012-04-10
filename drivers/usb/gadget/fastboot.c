@@ -13,7 +13,7 @@
 #define STRING_INTF				0
 #define STRING_SERIALNUMBER		0
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #undef debug
 #define debug(fmt, args...) printf(fmt, ##args)
@@ -202,7 +202,6 @@ int fastboot_send(const void *buf, int len)
 	fdev->send_req->length = len;
 	fdev->send_req->complete = fastboot_send_complete;
 	memcpy(fdev->send_req->buf, buf, len);
-//	writel(1u<<31|1<<26|2<<18|1<<15|1<<11|512<<0, 0x7c000900+0x20*1);
 
 	ret = usb_ep_queue(fdev->epin_bulk, fdev->send_req, 0);
 	if (ret)
@@ -241,7 +240,7 @@ static int fastboot_default(const char *cmd)
 {
 	char status[64];
 
-	debug("fastboot %s.\n", cmd);
+	printf("fastboot %s.\n", cmd);
 
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
@@ -253,11 +252,12 @@ static int fastboot_reboot(const char *cmd)
 {
 	char status[64];
 
-	debug("fastboot reboot.\n");
-	run_command("reset", 0);
+	printf("fastboot reboot.\n");
 
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
+
+	run_command("reset", 0);
 
 	return 0;
 }
@@ -266,7 +266,7 @@ static int fastboot_reboot_bootloader(const char *cmd)
 {
 	char status[64];
 
-	debug("fastboot reboot-bootloader.\n");
+	printf("fastboot reboot-bootloader.\n");
 
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
@@ -278,7 +278,7 @@ static int fastboot_continue(const char *cmd)
 {
 	char status[64];
 
-	debug("fastboot continue.\n");
+	printf("fastboot continue.\n");
 
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
@@ -286,6 +286,7 @@ static int fastboot_continue(const char *cmd)
 	return 0;
 }
 
+/* define the start address of fastboot buffer */
 static void *fastboot_buffer_addr = (void *)0x50000000;
 static int fastboot_download(const char *cmd)
 {
@@ -293,7 +294,7 @@ static int fastboot_download(const char *cmd)
 	unsigned size = simple_strtoul(cmd + 9, NULL, 16);
 	int ret;
 
-	debug("fastboot download(%d).\n", size);
+	printf("fastboot download(%d).\n", size);
 
 	sprintf(status, "DATA%08x", size);
 	fastboot_sends(status, sizeof(status));
@@ -316,7 +317,7 @@ static int fastboot_flash(const char *cmd)
 	char status[64];
 	const char *part = cmd + 6;
 
-	debug("fastboot flash %s.\n", part);
+	printf("fastboot flash %s.\n", part);
 
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
@@ -329,7 +330,7 @@ static int fastboot_erase(const char *cmd)
 	char status[64];
 	const char *part = cmd + 6;
 
-	debug("fastboot erase %s.\n", part);
+	printf("fastboot erase %s.\n", part);
 
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
@@ -341,7 +342,7 @@ static int fastboot_oem(const char *cmd)
 {
 	char status[64];
 
-	debug("fastboot %s.\n", cmd);
+	printf("fastboot %s.\n", cmd);
 
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
@@ -386,7 +387,6 @@ int fastboot_run(void)
 		if (len < 0)
 			return -1;
 
-		printf("cmd=%s\n", cmd);
 		handle = fastboot_find_item(cmd);
 		if (!handle) {
 			printf("Failed to find handle [fastboot %s]\n", cmd);
@@ -441,15 +441,12 @@ static int fastboot_bind(struct usb_gadget *gadget)
 		goto err;
 
 	fdev->req->buf = malloc(gadget->ep0->maxpacket);
-	fdev->recv_req->buf = malloc(512/*fdev->epout_bulk->maxpacket*/);
-	fdev->send_req->buf = malloc(512/*fdev->epin_bulk->maxpacket*/);
+	fdev->recv_req->buf = malloc(fdev->epout_bulk->maxpacket);
+	fdev->send_req->buf = malloc(fdev->epin_bulk->maxpacket);
 	if (!fdev->req->buf || !fdev->recv_req->buf || !fdev->send_req->buf)
 		goto err;
 
 	fdev->req->complete = fastboot_setup_complete;
-
-//	fastboot_endpin_desc.wMaxPacketSize = fdev->epin_bulk->maxpacket;
-//	fastboot_endpout_desc.wMaxPacketSize = fdev->epout_bulk->maxpacket;
 
 	pfdev = fdev;
 
@@ -514,6 +511,13 @@ static int fastboot_setup(struct usb_gadget *gadget, const struct usb_ctrlreques
 		type = wValue >> 8;
 		switch (type) {
 		case USB_DT_DEVICE:
+			/*
+			 * adjust the maxpacketsize here,
+			 * because it may have been changed while enumerating
+			 */
+			fastboot_endpin_desc.wMaxPacketSize = fdev->epin_bulk->maxpacket;
+			fastboot_endpout_desc.wMaxPacketSize = fdev->epout_bulk->maxpacket;
+
 			debug("USB_DT_DEVICE(wLength=%d)\n", wLength);
 			value = min(wLength, USB_DT_DEVICE_SIZE);
 			memcpy(buf, &fastboot_device_desc, value);

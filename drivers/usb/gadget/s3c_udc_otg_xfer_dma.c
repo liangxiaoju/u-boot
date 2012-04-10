@@ -204,9 +204,9 @@ int setdma_tx(struct s3c_ep *ep, struct s3c_request *req)
 
 	writel(DEPCTL_EPENA|DEPCTL_CNAK|ctrl, &reg->in_endp[ep_num].diepctl);
 
-	ctrl = readl(&reg->in_endp[0].diepctl);
+	ctrl = readl(&reg->in_endp[EP0_CON].diepctl);
 	ctrl = (ctrl&~(EP_MASK<<DEPCTL_NEXT_EP_BIT))|(ep_num<<DEPCTL_NEXT_EP_BIT);
-	writel(ctrl, &reg->in_endp[0].diepctl);
+	writel(ctrl, &reg->in_endp[EP0_CON].diepctl);
 
 	debug_cond(DEBUG_IN_EP,
 		"%s:EP%d TX DMA start : DIEPDMA0 = 0x%x,"
