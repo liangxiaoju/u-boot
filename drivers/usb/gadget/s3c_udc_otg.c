@@ -63,7 +63,7 @@
 #undef DEBUG_S3C_UDC_IN_EP
 #undef DEBUG_S3C_UDC
 
-#define DEBUG_S3C_UDC_SETUP
+//#define DEBUG_S3C_UDC_SETUP
 #define DEBUG_S3C_UDC_EP0
 #define DEBUG_S3C_UDC_ISR
 #define DEBUG_S3C_UDC_OUT_EP
@@ -805,13 +805,13 @@ static struct s3c_udc memory = {
 	/* first group of endpoints */
 	.ep[1] = {
 		.ep = {
-			.name = "ep1in-bulk",
+			.name = "ep1out-bulk",
 			.ops = &s3c_ep_ops,
 			.maxpacket = EP_FIFO_SIZE,
 		},
 		.dev = &memory,
 
-		.bEndpointAddress = USB_DIR_IN | 1,
+		.bEndpointAddress = USB_DIR_OUT | 1,
 		.bmAttributes = USB_ENDPOINT_XFER_BULK,
 
 		.ep_type = ep_bulk_out,
@@ -820,13 +820,13 @@ static struct s3c_udc memory = {
 
 	.ep[2] = {
 		.ep = {
-			.name = "ep2out-bulk",
+			.name = "ep2in-bulk",
 			.ops = &s3c_ep_ops,
 			.maxpacket = EP_FIFO_SIZE,
 		},
 		.dev = &memory,
 
-		.bEndpointAddress = USB_DIR_OUT | 2,
+		.bEndpointAddress = USB_DIR_IN | 2,
 		.bmAttributes = USB_ENDPOINT_XFER_BULK,
 
 		.ep_type = ep_bulk_in,
