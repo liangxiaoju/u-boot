@@ -236,7 +236,7 @@ int fastboot_sends(const void *buf, int len)
 	return len;
 }
 
-static int fastboot_default(const char *cmd)
+static int fastboot_unknown(const char *cmd)
 {
 	char status[64];
 
@@ -283,11 +283,12 @@ static int fastboot_continue(const char *cmd)
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
 
-	return 0;
+	return 1;
 }
 
 /* define the start address of fastboot buffer */
 static void *fastboot_buffer_addr = (void *)0x50000000;
+static unsigned download_size = 0;
 static int fastboot_download(const char *cmd)
 {
 	char status[64];
@@ -299,15 +300,16 @@ static int fastboot_download(const char *cmd)
 	sprintf(status, "DATA%08x", size);
 	fastboot_sends(status, sizeof(status));
 
+	sprintf(status, "OKAY");
 	ret = fastboot_recvs(fastboot_buffer_addr, size);
 	if (ret != size) {
 		printf("Error: Downloaded %d bytes of %d bytes.\n", ret, size);
 		sprintf(status, "FAIL");
-		return -1;
 	}
 
-	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
+
+	download_size = size;
 
 	return 0;
 }
@@ -320,6 +322,13 @@ static int fastboot_flash(const char *cmd)
 	printf("fastboot flash %s.\n", part);
 
 	sprintf(status, "OKAY");
+
+	if (download_size > 0) {
+		download_size = 0;
+	} else {
+		sprintf(status, "FAIL");
+	}
+
 	fastboot_sends(status, sizeof(status));
 
 	return 0;
@@ -351,7 +360,7 @@ static int fastboot_oem(const char *cmd)
 }
 
 fastboot_func_t fastboot_func[] = {
-	{ "default",			fastboot_default },
+	{ "unknown",			fastboot_unknown },
 	{ "reboot",				fastboot_reboot },
 	{ "reboot-bootloader",	fastboot_reboot_bootloader },
 	{ "continue",			fastboot_continue },
@@ -396,6 +405,9 @@ int fastboot_run(void)
 		ret = handle(cmd);
 		if (ret < 0)
 			printf("Failed to handle [fastboot %s]\n", cmd);
+
+		if (ret > 0)
+			break;
 	}
 
 	return 0;

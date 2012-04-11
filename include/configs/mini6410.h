@@ -54,7 +54,7 @@
 /* input clock of PLL: SMDK6400 has 12MHz input clock */
 #define CONFIG_SYS_CLK_FREQ	12000000
 
-#if !defined(CONFIG_NAND_SPL) && !defined(CONFIG_MMC_SPL) && (CONFIG_SYS_TEXT_BASE >= 0xc0000000)
+#if !defined(CONFIG_NAND_SPL) && !defined(CONFIG_SPL_BUILD) && (CONFIG_SYS_TEXT_BASE >= 0xc0000000)
 #define CONFIG_ENABLE_MMU
 #endif
 
@@ -275,6 +275,27 @@
 #define CONFIG_ONENAND
 #define CONFIG_MOVINAND
 */
+
+#define CONFIG_MTD_DEVICE
+#define CONFIG_MTD_PARTITIONS
+#define CONFIG_MTD_CONCAT
+#define CONFIG_CMD_MTDPARTS
+
+#define NAND_PARTS_DEFAULT			\
+		"1m(bootloader)ro,"			\
+		"1m(env),"					\
+		"1m(misc),"					\
+		"10m(kernel),"				\
+		"10m(recovery),"			\
+		"10m(ramdisk),"				\
+		"10m(logo),"				\
+		"150m(system),"				\
+		"30m(cache),"				\
+		"-(userdata)"
+
+#define MTDIDS_DEFAULT		"nand0=s3c-nand"
+#define MTDPARTS_DEFAULT	"mtdparts=s3c-nand:"	\
+							NAND_PARTS_DEFAULT
 
 #define CONFIG_USB_GADGET
 #define CONFIG_USB_GADGET_S3C_UDC_OTG
