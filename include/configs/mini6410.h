@@ -268,6 +268,7 @@
 #define CONFIG_SPL
 #define CONFIG_SPL_LDSCRIPT "$(TOPDIR)/board/$(BOARDDIR)/u-boot-spl.lds"
 #define CONFIG_SPL_START_S_PATH "$(CPUDIR)"
+#define CONFIG_SPL_SIZE	8192
 
 #define CONFIG_NAND
 #define CONFIG_NAND_S3C64XX

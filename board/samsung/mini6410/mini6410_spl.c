@@ -9,13 +9,13 @@ typedef int32_t (*CopyNandToMem_t)(uint32_t, uint32_t, uint8_t *);
 
 #define CopyMoviToMem(channel, startblkaddr, blocksize, buf, reinit)	\
 ({																		\
-	CopyMoviToMem_t ptr = (void *)(TCM_BASE + 0x08);					\
+	CopyMoviToMem_t ptr = (void *)(*((uint32_t *)(TCM_BASE + 0x08)));	\
 	ptr(channel, startblkaddr, blocksize, buf, reinit);					\
 })
 
 #define CopyNandToMem(block, page, buf)									\
 ({																		\
- 	CopyNandToMem_t ptr = (void *)(TCM_BASE + 0x04);					\
+ 	CopyNandToMem_t ptr = (void *)(*((uint32_t *)(TCM_BASE + 0x04)));	\
  	ptr(block, page, buf);												\
 })
 
@@ -39,6 +39,12 @@ typedef int32_t (*CopyNandToMem_t)(uint32_t, uint32_t, uint8_t *);
 #define MOVI_UBOOT_POS		(MOVI_LAST_BLKPOS - UBOOT_BLKCNT)
 #define MOVI_INIT_REQUIRED	1
 
+void led_test(void)
+{
+	GPKCON0_REG = 0x11110000;
+	GPKDAT_REG = 0x000000a0;
+	GPKPUD_REG = 0x55550055;
+}
 
 void board_init_f(unsigned long bootflag)
 {
@@ -66,8 +72,10 @@ void boot_from_nand(void)
 	int i;
 	__attribute__((noreturn)) void (*uboot)(void);
 
+	led_test();
 	for (i = 0; i < (UBOOT_BLKCNT * 512 / CONFIG_SYS_NAND_PAGE_SIZE); i++) {
-		CopyNandToMem(0, (8 * 1024 / CONFIG_SYS_NAND_PAGE_SIZE) + 1 + i,
+		CopyNandToMem(i / CONFIG_SYS_NAND_PAGE_COUNT,
+				((8 * 1024 / CONFIG_SYS_NAND_PAGE_SIZE) + 1 + i) % CONFIG_SYS_NAND_PAGE_COUNT,
 				(uint8_t *)(CONFIG_SYS_MMC_U_BOOT_START + i * CONFIG_SYS_NAND_PAGE_SIZE));
 	}
 

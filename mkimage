@@ -1,0 +1,31 @@
+#!/bin/bash
+
+rm -f u-boot-sd* u-boot-nand*
+
+# padding to 512k u-boot
+cat u-boot.bin >> u-boot-2x.bin
+cat u-boot.bin >> u-boot-2x.bin
+cat u-boot.bin >> u-boot-2x.bin
+
+# make BL2 (504k)
+split -d -a 1 -b 504k u-boot-2x.bin u-boot-504k.bin
+mv u-boot-504k.bin0 u-boot-504k.bin
+
+# movi image
+cat u-boot-504k.bin > u-boot-sd.bin
+cat spl/u-boot-spl-movi-pad.bin >> u-boot-sd.bin
+
+# nand image
+cat spl/u-boot-spl-nand-pad.bin > u-boot-nand.bin
+cat u-boot-504k.bin >> u-boot-nand.bin
+split -d -a 1 -b 512k u-boot-nand.bin u-boot-nand-512k.bin
+mv u-boot-nand-512k.bin0 u-boot-nand.bin
+
+# chmod
+chmod 777 u-boot-sd.bin
+chmod 777 u-boot-nand.bin
+
+# remove temp files
+rm -f u-boot-2x.bin
+rm -f u-boot-504k*
+rm -f u-boot-nand-512k*

@@ -110,6 +110,8 @@ ifdef CONFIG_SAMSUNG
 ALL-y	+= $(obj)$(BOARD)-spl.bin
 endif
 
+ALL-y	+= $(obj)u-boot-spl-movi-pad.bin $(obj)u-boot-spl-nand-pad.bin
+
 all:	$(ALL-y)
 
 ifdef CONFIG_SAMSUNG
@@ -117,6 +119,18 @@ $(obj)$(BOARD)-spl.bin: $(obj)u-boot-spl.bin
 	$(OBJTREE)/tools/mk$(BOARD)spl \
 		$(obj)u-boot-spl.bin $(obj)$(BOARD)-spl.bin
 endif
+
+MOVI_SPL_PAD_TO := $(shell expr $$[$(CONFIG_SPL_TEXT_BASE) + \
+	$(CONFIG_SPL_SIZE)])
+
+NAND_SPL_PAD_TO := $(shell expr $$[$(CONFIG_SPL_TEXT_BASE) + \
+	$(CONFIG_SPL_SIZE) + $(CONFIG_SYS_NAND_PAGE_SIZE)])
+
+$(obj)u-boot-spl-movi-pad.bin:	$(obj)u-boot-spl
+	$(OBJCOPY) $(OBJCFLAGS) --pad-to=$(MOVI_SPL_PAD_TO) -O binary $< $@
+
+$(obj)u-boot-spl-nand-pad.bin:	$(obj)u-boot-spl
+	$(OBJCOPY) $(OBJCFLAGS) --pad-to=$(NAND_SPL_PAD_TO) -O binary $< $@
 
 $(obj)u-boot-spl.bin:	$(obj)u-boot-spl
 	$(OBJCOPY) $(OBJCFLAGS) -O binary $< $@
