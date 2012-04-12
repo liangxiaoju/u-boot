@@ -71,6 +71,8 @@ static int s3c_otg_phy_control(int on)
 		writel(readl(OTHERS) | (1<<16), OTHERS);
 	else
 		writel(readl(OTHERS) & (~(1<<16)), OTHERS);
+
+	return 0;
 }
 
 static struct s3c_plat_otg_data s3c_otg_pdata = {

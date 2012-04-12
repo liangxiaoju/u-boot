@@ -46,11 +46,6 @@ void led_test(void)
 	GPKPUD_REG = 0x55550055;
 }
 
-void board_init_f(unsigned long bootflag)
-{
-	relocate_code(CONFIG_SYS_INIT_SP_ADDR, NULL, CONFIG_SPL_TEXT_BASE);
-}
-
 void boot_from_irom(void)
 {
 	volatile u32 *mmc_control4;
@@ -67,12 +62,12 @@ void boot_from_irom(void)
 	(*uboot)();
 }
 
+#if 0
 void boot_from_nand(void)
 {
 	int i;
 	__attribute__((noreturn)) void (*uboot)(void);
 
-	led_test();
 	for (i = 0; i < (UBOOT_BLKCNT * 512 / CONFIG_SYS_NAND_PAGE_SIZE); i++) {
 		CopyNandToMem(i / CONFIG_SYS_NAND_PAGE_COUNT,
 				((8 * 1024 / CONFIG_SYS_NAND_PAGE_SIZE) + 1 + i) % CONFIG_SYS_NAND_PAGE_COUNT,
@@ -82,6 +77,14 @@ void boot_from_nand(void)
 	uboot = (void *)CONFIG_SYS_MMC_U_BOOT_START;
 	(*uboot)();
 }
+#else
+void boot_from_nand(void)
+{
+	led_test();
+	nand_init();
+	nand_boot();
+}
+#endif
 
 void reserved(void)
 {
@@ -110,3 +113,15 @@ void spl_boot(void)
 	}
 
 }
+
+void board_init_f(unsigned long bootflag)
+{
+	spl_boot();
+	while (1);
+}
+
+void board_init_r(gd_t *id, ulong dest_addr)
+{
+	while (1);
+}
+

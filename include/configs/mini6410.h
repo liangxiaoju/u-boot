@@ -231,8 +231,8 @@
 #define CONFIG_SYS_NAND_U_BOOT_DST	CONFIG_SYS_PHY_UBOOT_BASE	/* NUB load-addr      */
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_NAND_U_BOOT_DST	/* NUB start-addr     */
 
-#define CONFIG_SYS_NAND_U_BOOT_OFFS	(4 * 1024)	/* Offset to RAM U-Boot image */
-#define CONFIG_SYS_NAND_U_BOOT_SIZE	(252 * 1024)	/* Size of RAM U-Boot image   */
+#define CONFIG_SYS_NAND_U_BOOT_OFFS	(8 * 1024 + 2048)	/* Offset to RAM U-Boot image */
+#define CONFIG_SYS_NAND_U_BOOT_SIZE	(1024 * 1024)	/* Size of RAM U-Boot image   */
 
 /* NAND chip page size		*/
 #define CONFIG_SYS_NAND_PAGE_SIZE	2048
@@ -269,6 +269,9 @@
 #define CONFIG_SPL_LDSCRIPT "$(TOPDIR)/board/$(BOARDDIR)/u-boot-spl.lds"
 #define CONFIG_SPL_START_S_PATH "$(CPUDIR)"
 #define CONFIG_SPL_SIZE	8192
+#define CONFIG_SPL_NAND_SUPPORT
+#define CONFIG_SPL_NAND_SIMPLE
+#define CONFIG_SPL_NAND_LOAD
 
 #define CONFIG_NAND
 #define CONFIG_NAND_S3C64XX
