@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -e
+
+if [ -b /dev/$1 ]; then
+	echo "sdcard present."
+else
+	echo "Please Insert sdcard."
+	exit 1;
+fi
+
+echo "Fusing sdcard ..."
+SD_BLKCNT=$(cat /sys/block/$1/size)
+#SD_SIZE=`expr ${SD_BLKCNT} \/ 2 \/ 1024`
+SD_SIZE=$((${SD_BLKCNT}*512/1024))
+echo "The total size of $1 is ${SD_SIZE}K."
+
+# define u-boot size here
+UBOOT_BLKCNT=$((512*1024/512))
+
+SD_BL2_POS=$((${SD_BLKCNT}-1-1-${UBOOT_BLKCNT}))
+SDHC_BL2_POS=$((${SD_BLKCNT}-1024-1-1-${UBOOT_BLKCNT}))
+
+if [ "$SD_BLKCNT" -gt "4194304" ] ; then
+	echo "fuse u-boot to sdhc"
+	dd if=u-boot-sd.bin of=/dev/$1 bs=512 seek=${SDHC_BL2_POS}
+else
+	echo "fuse u-boot to sd"
+	dd if=u-boot-sd.bin of=/dev/$1 bs=512 seek=${SD_BL2_POS}
+fi
+
+sync

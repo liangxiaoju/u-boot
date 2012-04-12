@@ -14,12 +14,14 @@ mv u-boot-504k.bin0 u-boot-504k.bin
 # movi image
 cat u-boot-504k.bin > u-boot-sd.bin
 cat spl/u-boot-spl-movi-pad.bin >> u-boot-sd.bin
+echo "Image: u-boot-sd.bin"
 
 # nand image
 cat spl/u-boot-spl-nand-pad.bin > u-boot-nand.bin
 cat u-boot-504k.bin >> u-boot-nand.bin
 split -d -a 1 -b 512k u-boot-nand.bin u-boot-nand-512k.bin
 mv u-boot-nand-512k.bin0 u-boot-nand.bin
+echo "Image: u-boot-nand.bin"
 
 # chmod
 chmod 777 u-boot-sd.bin
