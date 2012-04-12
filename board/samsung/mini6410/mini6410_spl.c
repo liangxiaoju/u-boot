@@ -1,4 +1,5 @@
 #include <common.h>
+#include <nand.h>
 #include <asm/io.h>
 #include <asm/arch/s3c6400.h>
 
@@ -37,13 +38,13 @@ typedef int32_t (*CopyNandToMem_t)(uint32_t, uint32_t, uint8_t *);
 #define UBOOT_BLKCNT		((512)*1024/512)
 #define MOVI_LAST_BLKPOS	(MOVI_TOTAL_BLKCNT - (eFUSE_SIZE / MOVI_BLKSIZE))
 #define MOVI_UBOOT_POS		(MOVI_LAST_BLKPOS - UBOOT_BLKCNT)
-#define MOVI_INIT_REQUIRED	1
+#define MOVI_INIT_REQUIRED	0
 
-void led_test(void)
+void led_on(uint8_t value)
 {
-	GPKCON0_REG = 0x11110000;
-	GPKDAT_REG = 0x000000a0;
-	GPKPUD_REG = 0x55550055;
+	writel((readl(GPKCON0) & 0x0000ffff) | 0x11110000, GPKCON0);
+	writel(readl(GPKPUD) & 0xffff00ff, GPKPUD);
+	writel((readl(GPKDAT) & 0xffffff0f) | ((~value & 0xf) << 4), GPKDAT);
 }
 
 void boot_from_irom(void)
@@ -51,7 +52,9 @@ void boot_from_irom(void)
 	volatile u32 *mmc_control4;
 	__attribute__((noreturn)) void (*uboot)(void);
 
-	mmc_control4 = (volatile u32 *)0x7C20008C;
+	led_on(1<<0);
+
+	mmc_control4 = (volatile u32 *)(0x7C20008C + HSMMC_CHANNEL * 0x100000);
 	writel(readl(mmc_control4) | (0x3 << 16), mmc_control4);
 
 	CopyMoviToMem(HSMMC_CHANNEL, MOVI_UBOOT_POS,
@@ -80,7 +83,7 @@ void boot_from_nand(void)
 #else
 void boot_from_nand(void)
 {
-	led_test();
+	led_on(1<<1);
 	nand_init();
 	nand_boot();
 }
