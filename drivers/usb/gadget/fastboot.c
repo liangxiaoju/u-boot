@@ -9,9 +9,9 @@
 
 #define STRING_MANUFACTURER		1
 #define STRING_PRODUCT			2
+#define STRING_SERIALNUMBER		3
 #define STRING_CONFIG			0
 #define STRING_INTF				0
-#define STRING_SERIALNUMBER		0
 
 //#define DEBUG
 #ifdef DEBUG
@@ -41,7 +41,7 @@ static char manufacturer[] = "U-Boot";
 static char product_desc[] = "mini6410";
 static char config_desc[] = "update-by-usb";
 static char intf_desc[] = "fastboot";
-static char serial_number[] = "12345";
+static char serial_number[] = "mini6410-uboot";
 
 static struct fastboot_dev *pfdev;
 
@@ -148,11 +148,14 @@ int fastboot_recv(void *buf, int len)
 	fdev->recv_req->complete = fastboot_recv_complete;
 	ret = usb_ep_queue(fdev->epout_bulk, fdev->recv_req, 0);
 	if (ret)
-		return -1;
+		return ret;
 
 	recv_complete = 0;
-	while (!ctrlc() && !recv_complete) {
+	while (!recv_complete) {
 		usb_gadget_handle_interrupts();
+
+		if (ctrlc())
+			return -EINTR;
 	}
 
 	memcpy(buf, fdev->recv_req->buf, fdev->recv_req->actual);
@@ -171,7 +174,7 @@ int fastboot_recvs(void *buf, int len)
 		amount = min(len, maxpacket);
 		actual = fastboot_recv(buf, amount);
 		if (actual < 0)
-			return -1;
+			return actual;
 
 		amount_left_to_recv -= actual;
 		buf += actual;
@@ -205,11 +208,14 @@ int fastboot_send(const void *buf, int len)
 
 	ret = usb_ep_queue(fdev->epin_bulk, fdev->send_req, 0);
 	if (ret)
-		return -1;
+		return ret;
 
 	send_complete = 0;
-	while (!ctrlc() && !send_complete) {
+	while (!send_complete) {
 		usb_gadget_handle_interrupts();
+
+		if (ctrlc())
+			return -EINTR;
 	}
 
 	/* XXX: what if actual != len */
@@ -227,7 +233,7 @@ int fastboot_sends(const void *buf, int len)
 		amount = min(len, maxpacket);
 		actual = fastboot_send(buf, amount);
 		if (actual < 0)
-			return -1;
+			return actual;
 
 		amount_left_to_send -= actual;
 		buf += actual;
@@ -271,6 +277,8 @@ static int fastboot_reboot_bootloader(const char *cmd)
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
 
+	run_command("reset", 0);
+
 	return 0;
 }
 
@@ -295,7 +303,7 @@ static int fastboot_download(const char *cmd)
 	unsigned size = simple_strtoul(cmd + 9, NULL, 16);
 	int ret;
 
-	printf("fastboot download(%d).\n", size);
+	printf("fastboot download(0x%x).\n", size);
 
 	sprintf(status, "DATA%08x", size);
 	fastboot_sends(status, sizeof(status));
@@ -303,7 +311,7 @@ static int fastboot_download(const char *cmd)
 	sprintf(status, "OKAY");
 	ret = fastboot_recvs(fastboot_buffer_addr, size);
 	if (ret != size) {
-		printf("Error: Downloaded %d bytes of %d bytes.\n", ret, size);
+		printf("Error: Downloaded 0x%x bytes of 0x%x bytes.\n", ret, size);
 		sprintf(status, "FAIL");
 	}
 
@@ -316,35 +324,56 @@ static int fastboot_download(const char *cmd)
 
 static int fastboot_flash(const char *cmd)
 {
-	char status[64];
+	int ret = 0;
+	char status[64], command[64];
 	const char *part = cmd + 6;
 
 	printf("fastboot flash %s.\n", part);
 
-	sprintf(status, "OKAY");
+	sprintf(status, "FAIL");
 
 	if (download_size > 0) {
+
 		download_size = 0;
-	} else {
-		sprintf(status, "FAIL");
+
+		sprintf(command, "nand erase.part %s", part);
+		ret = run_command(command, 0);
+		if (ret)
+			goto out;
+
+		sprintf(command, "nand write 0x%x %s", fastboot_buffer_addr, part);
+		ret = run_command(command, 0);
+		if (ret)
+			goto out;
+
+		sprintf(status, "OKAY");
+
 	}
 
+out:
 	fastboot_sends(status, sizeof(status));
 
-	return 0;
+	return ret;
 }
 
 static int fastboot_erase(const char *cmd)
 {
-	char status[64];
+	int ret;
+	char status[64], command[64];
 	const char *part = cmd + 6;
 
 	printf("fastboot erase %s.\n", part);
 
-	sprintf(status, "OKAY");
+	sprintf(command, "nand erase.part %s", part);
+	ret = run_command(command, 0);
+	if (ret)
+		sprintf(status, "FAIL");
+	else
+		sprintf(status, "OKAY");
+
 	fastboot_sends(status, sizeof(status));
 
-	return 0;
+	return ret;
 }
 
 static int fastboot_oem(const char *cmd)
@@ -396,6 +425,7 @@ int fastboot_run(void)
 		if (len < 0)
 			return -1;
 
+		cmd[len] = '\0';
 		handle = fastboot_find_item(cmd);
 		if (!handle) {
 			printf("Failed to find handle [fastboot %s]\n", cmd);

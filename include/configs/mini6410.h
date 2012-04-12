@@ -216,7 +216,7 @@
 /* NAND U-Boot load and start address */
 #define CONFIG_SYS_UBOOT_BASE		(CONFIG_SYS_MAPPED_RAM_BASE + 0x07e00000)
 
-#define CONFIG_ENV_OFFSET		0x0040000
+#define CONFIG_ENV_OFFSET		0x100000
 
 /* NAND configuration */
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
@@ -231,6 +231,7 @@
 #define CONFIG_SYS_NAND_U_BOOT_DST	CONFIG_SYS_PHY_UBOOT_BASE	/* NUB load-addr      */
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_NAND_U_BOOT_DST	/* NUB start-addr     */
 
+/* BL2 offset: 8k + (1 page) */
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	(8 * 1024 + 2048)	/* Offset to RAM U-Boot image */
 #define CONFIG_SYS_NAND_U_BOOT_SIZE	(1024 * 1024)	/* Size of RAM U-Boot image   */
 
@@ -298,8 +299,8 @@
 		"-(userdata)"
 
 #define MTDIDS_DEFAULT		"nand0=s3c-nand"
-#define MTDPARTS_DEFAULT	"mtdparts=s3c-nand:"	\
-							NAND_PARTS_DEFAULT
+#define MTDPARTS_DEFAULT	"mtdparts=s3c-nand:"NAND_PARTS_DEFAULT
+#define CONFIG_EXTRA_ENV_SETTINGS "mtdparts="MTDPARTS_DEFAULT"\0"
 
 #define CONFIG_USB_GADGET
 #define CONFIG_USB_GADGET_S3C_UDC_OTG
