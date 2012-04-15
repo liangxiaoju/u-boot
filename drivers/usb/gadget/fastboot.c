@@ -327,6 +327,7 @@ static int fastboot_flash(const char *cmd)
 	int ret = 0;
 	char status[64], command[64];
 	const char *part = cmd + 6;
+	unsigned long addr;
 
 	printf("fastboot flash %s.\n", part);
 
@@ -334,23 +335,29 @@ static int fastboot_flash(const char *cmd)
 
 	if (download_size > 0) {
 
-		download_size = 0;
+		addr = simple_strtoul(part, NULL, 16);
+		if (part[0] == '0' && part[1] == 'x') {
+			memcpy((void *)addr, fastboot_buffer_addr, download_size);
+			sprintf(status, "OKAY");
+			goto out;
+		}
 
 		sprintf(command, "nand erase.part %s", part);
 		ret = run_command(command, 0);
 		if (ret)
 			goto out;
 
-		sprintf(command, "nand write 0x%x %s", fastboot_buffer_addr, part);
+		sprintf(command, "nand write 0x%x %s 0x%x",
+				(unsigned)fastboot_buffer_addr, part, download_size);
 		ret = run_command(command, 0);
 		if (ret)
 			goto out;
 
 		sprintf(status, "OKAY");
-
 	}
 
 out:
+	download_size = 0;
 	fastboot_sends(status, sizeof(status));
 
 	return ret;
