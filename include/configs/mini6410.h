@@ -211,8 +211,10 @@
 				"bootm 0xc0018000"
 #else
 #define CONFIG_SYS_MAPPED_RAM_BASE	CONFIG_SYS_SDRAM_BASE
-#define CONFIG_BOOTCOMMAND	"nand read 0x50007fc0 0x00300000 0x200000;"	\
-				"bootm 0x50007fc0"
+#define CONFIG_BOOTCOMMAND	\
+				"nand read 0x50008000 kernel 0x280000;"	\
+				"nand read 0x51000000 recovery 0x400000;" \
+				"bootm 0x50008000 0x51000000"
 #endif
 
 /* NAND U-Boot load and start address */
@@ -308,7 +310,9 @@
 #define CONFIG_USB_GADGET_S3C_UDC_OTG
 #define CONFIG_SYS_CACHELINE_SIZE	32
 #define CONFIG_CMD_FASTBOOT
+#define CONFIG_FASTBOOT_BUFFER_ADDR	0x52000000
 #define CONFIG_FASTBOOT
+#define CONFIG_CMD_BOOTZ
 #define CONFIG_BOARD_LATE_INIT
 
 /* Settings as above boot configuration */
