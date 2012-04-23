@@ -21,6 +21,35 @@
 #define debug(fmt, args...) do {} while (0)
 #endif
 
+#define BOOT_MAGIC "ANDROID!"
+#define BOOT_MAGIC_SIZE 8
+#define BOOT_NAME_SIZE 16
+#define BOOT_ARGS_SIZE 512
+
+struct boot_img_hdr
+{
+    unsigned char magic[BOOT_MAGIC_SIZE];
+
+    unsigned kernel_size;  /* size in bytes */
+    unsigned kernel_addr;  /* physical load addr */
+
+    unsigned ramdisk_size; /* size in bytes */
+    unsigned ramdisk_addr; /* physical load addr */
+
+    unsigned second_size;  /* size in bytes */
+    unsigned second_addr;  /* physical load addr */
+
+    unsigned tags_addr;    /* physical addr for kernel tags */
+    unsigned page_size;    /* flash page size we assume */
+    unsigned unused[2];    /* future expansion: should be 0 */
+
+    unsigned char name[BOOT_NAME_SIZE]; /* asciiz product name */
+    
+    unsigned char cmdline[BOOT_ARGS_SIZE];
+
+    unsigned id[8]; /* timestamp / checksum / sha1 / etc */
+};
+
 typedef int (*fastboot_handle_t)(const char *cmd);
 
 typedef struct {
@@ -42,6 +71,10 @@ static char product_desc[] = "mini6410";
 static char config_desc[] = "update-by-usb";
 static char intf_desc[] = "fastboot";
 static char serial_number[] = "mini6410-uboot";
+
+/* define the start address of fastboot buffer */
+static void *fastboot_buffer_addr = (void *)CONFIG_FASTBOOT_BUFFER_ADDR;
+static unsigned download_size = 0;
 
 static struct fastboot_dev *pfdev;
 
@@ -294,9 +327,6 @@ static int fastboot_continue(const char *cmd)
 	return 1;
 }
 
-/* define the start address of fastboot buffer */
-static void *fastboot_buffer_addr = (void *)0x50000000;
-static unsigned download_size = 0;
 static int fastboot_download(const char *cmd)
 {
 	char status[64];
@@ -327,6 +357,7 @@ static int fastboot_flash(const char *cmd)
 	int ret = 0;
 	char status[64], command[64];
 	const char *part = cmd + 6;
+	unsigned long addr;
 
 	printf("fastboot flash %s.\n", part);
 
@@ -334,26 +365,77 @@ static int fastboot_flash(const char *cmd)
 
 	if (download_size > 0) {
 
-		download_size = 0;
+		addr = simple_strtoul(part, NULL, 16);
+		if (part[0] == '0' && part[1] == 'x') {
+			memcpy((void *)addr, fastboot_buffer_addr, download_size);
+			sprintf(status, "OKAY");
+			goto out;
+		}
 
 		sprintf(command, "nand erase.part %s", part);
 		ret = run_command(command, 0);
 		if (ret)
 			goto out;
 
-		sprintf(command, "nand write 0x%x %s", fastboot_buffer_addr, part);
+		sprintf(command, "nand write 0x%x %s 0x%x",
+				(unsigned)fastboot_buffer_addr, part, download_size);
 		ret = run_command(command, 0);
 		if (ret)
 			goto out;
 
 		sprintf(status, "OKAY");
-
 	}
 
 out:
+	download_size = 0;
 	fastboot_sends(status, sizeof(status));
 
 	return ret;
+}
+
+static int fastboot_boot(const char *cmd)
+{
+	char status[64], command[64];
+	struct boot_img_hdr *hdr = fastboot_buffer_addr;
+	unsigned page_size, ksize, rsize, kaddr=0, raddr=0;
+
+	printf("fastboot boot.\n");
+
+	sprintf(status, "FAIL");
+
+	if (download_size > 0) {
+		if (strncmp(hdr->magic, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
+			download_size = 0;
+			goto out;
+		}
+		page_size = hdr->page_size;
+		ksize = roundup(hdr->kernel_size, page_size);
+		rsize = roundup(hdr->ramdisk_size, page_size);
+		kaddr = hdr->kernel_addr;
+		raddr = hdr->ramdisk_addr;
+		/* make sure the base address is 0x50000000 */
+		kaddr = (kaddr & (~(0xf<<28))) | (0x5<<28);
+		raddr = (raddr & (~(0xf<<28))) | (0x5<<28);
+
+		memcpy((void *)kaddr, (void *)(hdr->magic + page_size), ksize);
+		memcpy((void *)raddr, (void *)hdr->magic + page_size + ksize, rsize);
+
+		if (hdr->cmdline[0]) {
+			setenv("bootcmd", hdr->cmdline);
+		}
+
+		sprintf(status, "OKAY");
+	}
+out:
+	fastboot_sends(status, sizeof(status));
+
+	if (download_size > 0) {
+		download_size = 0;
+		sprintf(command, "bootz 0x%x 0x%x 0x%x", kaddr, raddr, hdr->ramdisk_size);
+		run_command(command, 0);
+	}
+
+	return 0;
 }
 
 static int fastboot_erase(const char *cmd)
@@ -395,6 +477,7 @@ fastboot_func_t fastboot_func[] = {
 	{ "continue",			fastboot_continue },
 	{ "download",			fastboot_download },
 	{ "flash",				fastboot_flash },
+	{ "boot",				fastboot_boot },
 	{ "erase",				fastboot_erase },
 	{ "oem",				fastboot_oem },
 };

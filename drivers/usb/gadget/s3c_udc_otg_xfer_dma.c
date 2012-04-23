@@ -197,16 +197,20 @@ int setdma_tx(struct s3c_ep *ep, struct s3c_request *req)
 
 	/* Write the FIFO number to be used for this endpoint */
 	ctrl &= DIEPCTL_TX_FIFO_NUM_MASK;
-//	ctrl |= DIEPCTL_TX_FIFO_NUM(ep->fifo_num);
+#ifndef CONFIG_S3C6410
+	ctrl |= DIEPCTL_TX_FIFO_NUM(ep->fifo_num);
+#endif
 
 	/* Clear reserved (Next EP) bits */
 	ctrl = (ctrl&~(EP_MASK<<DEPCTL_NEXT_EP_BIT));
 
 	writel(DEPCTL_EPENA|DEPCTL_CNAK|ctrl, &reg->in_endp[ep_num].diepctl);
 
+#ifdef CONFIG_S3C6410
 	ctrl = readl(&reg->in_endp[EP0_CON].diepctl);
 	ctrl = (ctrl&~(EP_MASK<<DEPCTL_NEXT_EP_BIT))|(ep_num<<DEPCTL_NEXT_EP_BIT);
 	writel(ctrl, &reg->in_endp[EP0_CON].diepctl);
+#endif
 
 	debug_cond(DEBUG_IN_EP,
 		"%s:EP%d TX DMA start : DIEPDMA0 = 0x%x,"

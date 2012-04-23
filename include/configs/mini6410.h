@@ -65,7 +65,7 @@
 /*
  * Architecture magic and machine type
  */
-#define CONFIG_MACH_TYPE		1270
+#define CONFIG_MACH_TYPE		2520
 
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
@@ -78,9 +78,11 @@
 /*
  * Hardware drivers
  */
-#define CONFIG_CS8900			/* we have a CS8900 on-board	*/
-#define CONFIG_CS8900_BASE	  	0x18800300
-#define CONFIG_CS8900_BUS16		/* follow the Linux driver	*/
+/* #define CONFIG_DRIVER_DM9000 */
+#define CONFIG_ETHADDR
+#define CONFIG_IPADDR	192.168.0.105
+#define CONFIG_SERVERIP	192.168.0.100
+#define CONFIG_NETMASK	255.255.255.0
 
 /*
  * select serial console configuration
@@ -209,8 +211,10 @@
 				"bootm 0xc0018000"
 #else
 #define CONFIG_SYS_MAPPED_RAM_BASE	CONFIG_SYS_SDRAM_BASE
-#define CONFIG_BOOTCOMMAND	"nand read 0x50018000 0x60000 0x1c0000;" \
-				"bootm 0x50018000"
+#define CONFIG_BOOTCOMMAND	\
+				"nand read 0x50008000 kernel 0x280000;"	\
+				"nand read 0x51000000 recovery 0x400000;" \
+				"bootm 0x50008000 0x51000000"
 #endif
 
 /* NAND U-Boot load and start address */
@@ -298,20 +302,22 @@
 		"30m(cache),"				\
 		"-(userdata)"
 
-#define MTDIDS_DEFAULT		"nand0=s3c-nand"
-#define MTDPARTS_DEFAULT	"mtdparts=s3c-nand:"NAND_PARTS_DEFAULT
+#define MTDIDS_DEFAULT		"nand0=nand"
+#define MTDPARTS_DEFAULT	"mtdparts=nand:"NAND_PARTS_DEFAULT
 #define CONFIG_EXTRA_ENV_SETTINGS "mtdparts="MTDPARTS_DEFAULT"\0"
 
 #define CONFIG_USB_GADGET
 #define CONFIG_USB_GADGET_S3C_UDC_OTG
 #define CONFIG_SYS_CACHELINE_SIZE	32
 #define CONFIG_CMD_FASTBOOT
+#define CONFIG_FASTBOOT_BUFFER_ADDR	0x52000000
 #define CONFIG_FASTBOOT
+#define CONFIG_CMD_BOOTZ
 #define CONFIG_BOARD_LATE_INIT
 
 /* Settings as above boot configuration */
 #define CONFIG_ENV_IS_IN_NAND
-#define CONFIG_BOOTARGS		"console=ttySAC,115200"
+#define CONFIG_BOOTARGS		"console=ttySAC,115200 " MTDPARTS_DEFAULT
 
 #if !defined(CONFIG_ENABLE_MMU)
 #define CONFIG_CMD_USB			1
