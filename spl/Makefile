@@ -110,7 +110,9 @@ ifdef CONFIG_SAMSUNG
 ALL-y	+= $(obj)$(BOARD)-spl.bin
 endif
 
-ALL-y	+= $(obj)u-boot-spl-movi-pad.bin $(obj)u-boot-spl-nand-pad.bin
+ifdef CONFIG_S3C6410
+ALL-y	+= $(OBJTREE)/u-boot-spl.bin
+endif
 
 all:	$(ALL-y)
 
@@ -120,17 +122,15 @@ $(obj)$(BOARD)-spl.bin: $(obj)u-boot-spl.bin
 		$(obj)u-boot-spl.bin $(obj)$(BOARD)-spl.bin
 endif
 
-MOVI_SPL_PAD_TO := $(shell expr $$[$(CONFIG_SPL_TEXT_BASE) + \
-	$(CONFIG_SPL_SIZE)])
-
-NAND_SPL_PAD_TO := $(shell expr $$[$(CONFIG_SPL_TEXT_BASE) + \
-	$(CONFIG_SPL_SIZE) + $(CONFIG_SYS_NAND_PAGE_SIZE)])
-
-$(obj)u-boot-spl-movi-pad.bin:	$(obj)u-boot-spl
-	$(OBJCOPY) $(OBJCFLAGS) --pad-to=$(MOVI_SPL_PAD_TO) -O binary $< $@
-
-$(obj)u-boot-spl-nand-pad.bin:	$(obj)u-boot-spl
-	$(OBJCOPY) $(OBJCFLAGS) --pad-to=$(NAND_SPL_PAD_TO) -O binary $< $@
+ifdef CONFIG_S3C6410
+$(OBJTREE)/u-boot-spl.bin: $(obj)u-boot-spl.bin
+	$(OBJTREE)/tools/mks3c6410spl \
+		--spl $(obj)u-boot-spl.bin \
+		--uboot $(OBJTREE)/u-boot.bin \
+		--spl-size $(CONFIG_SPL_SIZE) \
+		--page-size $(CONFIG_SYS_NAND_PAGE_SIZE) \
+		--outdir $(OBJTREE)
+endif
 
 $(obj)u-boot-spl.bin:	$(obj)u-boot-spl
 	$(OBJCOPY) $(OBJCFLAGS) -O binary $< $@
