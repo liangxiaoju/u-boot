@@ -6,7 +6,7 @@ spl=
 uboot=
 spl_size=
 page_size=
-outdir=
+output=
 
 usage ()
 {
@@ -15,7 +15,7 @@ usage ()
 	echo -e "\t--uboot u-boot.bin"
 	echo -e "\t--spl-size size"
 	echo -e "\t--page-size size"
-	echo -e "\t--outdir dir"
+	echo -e "\t--output file"
 }
 
 while true
@@ -37,8 +37,8 @@ do
 			page_size=$2
 			shift 2
 			;;
-		--outdir)
-			outdir=$2
+		--output)
+			output=$2
 			shift 2
 			;;
 		*)
@@ -54,26 +54,31 @@ then
 	   exit 1
 fi
 
-cp -fv ${spl} ${outdir}/spl.bin
+outdir=$(dirname ${output})
 
-dd if=/dev/zero bs=512K count=1 2>/dev/null | tr '\0' '\377' > ${outdir}/0xff.bin
+cd ${outdir}
+
+cp -f ${spl} spl.bin
+
+dd if=/dev/zero bs=512K count=1 2>/dev/null | tr '\0' '\377' > 0xff.bin
 
 # stage1: 10k
-cat ${outdir}/spl.bin > ${outdir}/stage1.bin
-cat ${outdir}/0xff.bin >> ${outdir}/stage1.bin
-dd if=${outdir}/stage1.bin of=${outdir}/stage1.bin.tmp \
-	bs=$((${spl_size}+${page_size})) count=1 2>/dev/null
-mv ${outdir}/stage1.bin.tmp ${outdir}/stage1.bin
+cat spl.bin > stage1.bin
+cat 0xff.bin >> stage1.bin
+dd if=stage1.bin of=stage1.bin.tmp bs=$((${spl_size}+${page_size})) count=1 2>/dev/null
+mv stage1.bin.tmp stage1.bin
 
 # stage2: 504k
-cat ${uboot} > ${outdir}/stage2.bin
-cat ${outdir}/0xff.bin >> ${outdir}/stage2.bin
-dd if=${outdir}/stage2.bin of=${outdir}/stage2.bin.tmp bs=504K count=1 2>/dev/null
-mv ${outdir}/stage2.bin.tmp ${outdir}/stage2.bin
+cat ${uboot} > stage2.bin
+cat 0xff.bin >> stage2.bin
+dd if=stage2.bin of=stage2.bin.tmp bs=504K count=1 2>/dev/null
+mv stage2.bin.tmp stage2.bin
 
 # stage3: 8k
-dd if=${outdir}/stage1.bin of=${outdir}/stage3.bin bs=${spl_size} count=1 2>/dev/null
+dd if=stage1.bin of=stage3.bin bs=${spl_size} count=1 2>/dev/null
 
-cat ${outdir}/stage{1,2,3}.bin > ${outdir}/u-boot-spl.bin
+cat stage{1,2,3}.bin > u-boot-spl.bin
 
-rm -f ${outdir}/{spl,0xff,stage*}.bin
+rm -f {spl,0xff,stage*}.bin
+
+cd -

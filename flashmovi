@@ -3,9 +3,9 @@
 set -e
 
 if [ -b /dev/$1 ]; then
-	echo "sdcard present."
+	echo "Sdcard present."
 else
-	echo "Please Insert sdcard."
+	echo "Please insert sdcard."
 	exit 1;
 fi
 
@@ -22,11 +22,11 @@ SD_BL2_POS=$((${SD_BLKCNT}-1-1-${UBOOT_BLKCNT}))
 SDHC_BL2_POS=$((${SD_BLKCNT}-1024-1-1-${UBOOT_BLKCNT}))
 
 if [ "$SD_BLKCNT" -gt "4194304" ] ; then
-	echo "fuse u-boot to sdhc"
-	dd if=u-boot-spl.bin of=/dev/$1 bs=512 seek=${SDHC_BL2_POS}
+	echo "Fuse u-boot to SDHC"
+	dd if=u-boot-spl.bin of=/dev/$1 bs=512 seek=${SDHC_BL2_POS} 2>/dev/null
 else
-	echo "fuse u-boot to sd"
-	dd if=u-boot-spl.bin of=/dev/$1 bs=512 seek=${SD_BL2_POS}
+	echo "Fuse u-boot to SD"
+	dd if=u-boot-spl.bin of=/dev/$1 bs=512 seek=${SD_BL2_POS} 2>/dev/null
 fi
 
 sync

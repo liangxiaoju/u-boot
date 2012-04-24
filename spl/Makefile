@@ -123,13 +123,13 @@ $(obj)$(BOARD)-spl.bin: $(obj)u-boot-spl.bin
 endif
 
 ifdef CONFIG_S3C6410
-$(OBJTREE)/u-boot-spl.bin: $(obj)u-boot-spl.bin
+$(OBJTREE)/u-boot-spl.bin: depend
 	$(OBJTREE)/tools/mks3c6410spl \
 		--spl $(obj)u-boot-spl.bin \
 		--uboot $(OBJTREE)/u-boot.bin \
 		--spl-size $(CONFIG_SPL_SIZE) \
 		--page-size $(CONFIG_SYS_NAND_PAGE_SIZE) \
-		--outdir $(OBJTREE)
+		--output $@
 endif
 
 $(obj)u-boot-spl.bin:	$(obj)u-boot-spl

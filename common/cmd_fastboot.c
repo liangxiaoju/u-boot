@@ -45,6 +45,6 @@ static int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 
 U_BOOT_CMD(
 	fastboot, 3, 0, do_fastboot,
-	"",
-	"\n"
+	"Fastboot is protocol used to update the flash filesystem in Android devices from a host over USB.",
+	"[recv, send]"
 );
