@@ -148,3 +148,18 @@ int board_eth_init(bd_t *bis)
 	return rc;
 }
 #endif
+
+#ifdef CONFIG_GENERIC_MMC
+extern int s3c6410_mmc_init(int, int);
+int board_mmc_init(bd_t *bis)
+{
+	int ret = 0;
+
+	writel(0x0, GPGPUD);
+	writel(0x02222222, GPGCON);
+
+	ret = s3c6410_mmc_init(0, 4);
+
+	return ret;
+}
+#endif

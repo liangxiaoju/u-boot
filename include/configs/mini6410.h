@@ -78,11 +78,13 @@
 /*
  * Hardware drivers
  */
-/* #define CONFIG_DRIVER_DM9000 */
-#define CONFIG_ETHADDR
-#define CONFIG_IPADDR	192.168.0.105
-#define CONFIG_SERVERIP	192.168.0.100
-#define CONFIG_NETMASK	255.255.255.0
+/*
+ * #define CONFIG_DRIVER_DM9000
+ * #define CONFIG_ETHADDR
+ * #define CONFIG_IPADDR	192.168.0.105
+ * #define CONFIG_SERVERIP	192.168.0.100
+ * #define CONFIG_NETMASK	255.255.255.0
+ */
 
 /*
  * select serial console configuration
@@ -314,6 +316,11 @@
 #define CONFIG_FASTBOOT
 #define CONFIG_CMD_BOOTZ
 #define CONFIG_BOARD_LATE_INIT
+#define CONFIG_GENERIC_MMC
+/* #define CONFIG_SDHCI */
+#define CONFIG_CMD_MMC
+#define CONFIG_MMC
+#define CONFIG_S3C6410_MMC
 
 /* Settings as above boot configuration */
 #define CONFIG_ENV_IS_IN_NAND
