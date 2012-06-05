@@ -52,6 +52,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define MV_PHY_ADR_REQUEST 0xee
 #define MVGBE_SMI_REG (((struct mvgbe_registers *)MVGBE0_BASE)->smi)
 
+#if defined(CONFIG_MII) || defined(CONFIG_CMD_MII)
 /*
  * smi_reg_read - miiphy_read callback function.
  *
@@ -181,6 +182,7 @@ static int smi_reg_write(const char *devname, u8 phy_adr, u8 reg_ofs, u16 data)
 
 	return 0;
 }
+#endif
 
 /* Stop and checks all queues */
 static void stop_queue(u32 * qreg)
@@ -523,8 +525,7 @@ static int mvgbe_write_hwaddr(struct eth_device *dev)
 	return 0;
 }
 
-static int mvgbe_send(struct eth_device *dev, void *dataptr,
-		      int datasize)
+static int mvgbe_send(struct eth_device *dev, void *dataptr, int datasize)
 {
 	struct mvgbe_device *dmvgbe = to_mvgbe(dev);
 	struct mvgbe_registers *regs = dmvgbe->regs;

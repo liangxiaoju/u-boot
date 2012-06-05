@@ -66,9 +66,10 @@
 #define CONFIG_BAUDRATE		115200
 
 /* MMC */
-#define CONFIG_GENERIC_MMC	1
-#define CONFIG_MMC		1
-#define CONFIG_S5P_MMC		1
+#define CONFIG_GENERIC_MMC
+#define CONFIG_MMC
+#define CONFIG_SDHCI
+#define CONFIG_S5P_SDHCI
 
 /* PWM */
 #define CONFIG_PWM			1
@@ -233,6 +234,7 @@
 #define CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* Reserve 2 sectors */
 
 #define CONFIG_USE_ONENAND_BOARD_INIT
+#define CONFIG_SAMSUNG_ONENAND
 #define CONFIG_SYS_ONENAND_BASE		0x0C000000
 
 #define CONFIG_ENV_IS_IN_MMC		1

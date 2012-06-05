@@ -46,6 +46,7 @@
 #define CONFIG_SPL_LDSCRIPT	"arch/arm/cpu/arm926ejs/mx28/u-boot-spl.lds"
 #define CONFIG_SPL_LIBCOMMON_SUPPORT
 #define CONFIG_SPL_LIBGENERIC_SUPPORT
+#define CONFIG_SPL_GPIO_SUPPORT
 
 /*
  * U-Boot Commands
@@ -67,6 +68,7 @@
 #define CONFIG_CMD_SF
 #define CONFIG_CMD_SPI
 #define CONFIG_CMD_USB
+#define CONFIG_CMD_BOOTZ
 
 /*
  * Memory configurations
@@ -81,7 +83,7 @@
 #define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM_1
 /* Point initial SP in SRAM so SPL can use it too. */
 
-#define CONFIG_SYS_INIT_RAM_ADDR	0x00002000
+#define CONFIG_SYS_INIT_RAM_ADDR	0x00000000
 #define CONFIG_SYS_INIT_RAM_SIZE	(128 * 1024)
 
 #define CONFIG_SYS_INIT_SP_OFFSET \
@@ -126,6 +128,11 @@
 #define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
 
 /*
+ * DMA
+ */
+#define CONFIG_APBH_DMA
+
+/*
  * MMC Driver
  */
 #define CONFIG_ENV_IS_IN_MMC
@@ -138,7 +145,18 @@
 #ifdef	CONFIG_CMD_MMC
 #define CONFIG_MMC
 #define CONFIG_GENERIC_MMC
+#define CONFIG_MMC_BOUNCE_BUFFER
 #define CONFIG_MXS_MMC
+#endif
+
+/*
+ * NAND Driver
+ */
+#ifdef CONFIG_CMD_NAND
+#define CONFIG_NAND_MXS
+#define CONFIG_SYS_MAX_NAND_DEVICE	1
+#define CONFIG_SYS_NAND_BASE		0x60000000
+#define CONFIG_SYS_NAND_5_ADDR_CYCLE
 #endif
 
 /*
@@ -186,6 +204,8 @@
 /* SPI Flash */
 #ifdef CONFIG_CMD_SF
 #define CONFIG_SPI_FLASH
+#define CONFIG_SF_DEFAULT_BUS	2
+#define CONFIG_SF_DEFAULT_CS	0
 /* this may vary and depends on the installed chip */
 #define CONFIG_SPI_FLASH_SST
 #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
@@ -217,6 +237,7 @@
 #define CONFIG_BOOTCOMMAND	"run bootcmd_net"
 #define CONFIG_LOADADDR	0x42000000
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
+#define CONFIG_OF_LIBFDT
 
 /*
  * Extra Environments
