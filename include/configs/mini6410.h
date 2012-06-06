@@ -78,11 +78,20 @@
 /*
  * Hardware drivers
  */
-/* #define CONFIG_DRIVER_DM9000 */
-#define CONFIG_ETHADDR
-#define CONFIG_IPADDR	192.168.0.105
-#define CONFIG_SERVERIP	192.168.0.100
-#define CONFIG_NETMASK	255.255.255.0
+#define CONFIG_NET_MULTI           	1
+#define CONFIG_CMD_DHCP
+#define CONFIG_DRIVER_DM9000		1
+#define CONFIG_DM9000_NO_SROM		1
+#define CONFIG_DM9000_USE_16BIT		1
+#define CONFIG_DM9000_BASE			0x18000300
+#define DM9000_IO					CONFIG_DM9000_BASE
+#define DM9000_DATA					(CONFIG_DM9000_BASE+4)
+
+#define CONFIG_ETHADDR				00:e2:b0:10:d8:80
+#define CONFIG_NETMASK				255.255.255.0
+#define CONFIG_IPADDR				192.168.1.200
+#define CONFIG_SERVERIP				192.168.1.100
+#define CONFIG_GATEWAYIP			192.168.1.1
 
 /*
  * select serial console configuration
@@ -211,10 +220,7 @@
 				"bootm 0xc0018000"
 #else
 #define CONFIG_SYS_MAPPED_RAM_BASE	CONFIG_SYS_SDRAM_BASE
-#define CONFIG_BOOTCOMMAND	\
-				"nand read 0x50008000 kernel 0x280000;"	\
-				"nand read 0x51000000 recovery 0x400000;" \
-				"bootm 0x50008000 0x51000000"
+#define CONFIG_BOOTCOMMAND	"run nfsboot"
 #endif
 
 /* NAND U-Boot load and start address */
@@ -304,7 +310,35 @@
 
 #define MTDIDS_DEFAULT		"nand0=nand"
 #define MTDPARTS_DEFAULT	"mtdparts=nand:"NAND_PARTS_DEFAULT
-#define CONFIG_EXTRA_ENV_SETTINGS "mtdparts="MTDPARTS_DEFAULT"\0"
+
+#define COMMON_BOOTARGS				\
+		"console=ttySAC,115200 ${mtdparts} "
+
+#define NFSBOOT										\
+		"setenv bootargs "COMMON_BOOTARGS			\
+		"root=/dev/nfs rw "							\
+		"nfsroot=${serverip}:/nfs/root,tcp,nolock "	\
+		"ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}::eth0:off; "	\
+		"nfs 0x50008000 ${serverip}:/nfs/kernel; bootz 0x50008000"
+
+#define TFTPBOOT										\
+		"setenv bootargs "COMMON_BOOTARGS"; "			\
+		"tftpboot 0x50008000 ${serverip}:kernel; "		\
+		"tftpboot 0x51000000 ${serverip}:rootfs; "		\
+		"bootz 0x50008000 0x51000000"
+
+#define RAMFSBOOT									\
+		"setenv bootargs "COMMON_BOOTARGS"; "		\
+		"nand read 0x50008000 kernel 0x280000; "	\
+		"nand read 0x51000000 ramdisk 0x400000; "	\
+		"bootz 0x50008000 0x51000000"
+
+#define CONFIG_EXTRA_ENV_SETTINGS			\
+		"mtdparts="MTDPARTS_DEFAULT"\0"		\
+		"nfsboot="NFSBOOT"\0"				\
+		"tftpboot="TFTPBOOT"\0"				\
+		"ramfsboot="RAMFSBOOT"\0"
+
 
 #define CONFIG_USB_GADGET
 #define CONFIG_USB_GADGET_S3C_UDC_OTG
@@ -314,6 +348,13 @@
 #define CONFIG_FASTBOOT
 #define CONFIG_CMD_BOOTZ
 #define CONFIG_BOARD_LATE_INIT
+#define CONFIG_GENERIC_MMC
+/* #define CONFIG_SDHCI */
+#define CONFIG_CMD_MMC
+#define CONFIG_MMC
+#define CONFIG_S3C6410_MMC
+#define CONFIG_YAFFS2
+#define CONFIG_CMD_NAND_YAFFS
 
 /* Settings as above boot configuration */
 #define CONFIG_ENV_IS_IN_NAND
