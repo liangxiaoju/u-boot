@@ -31,13 +31,9 @@ typedef int32_t (*CopyNandToMem_t)(uint32_t, uint32_t, uint8_t *);
 #define eFUSE_SIZE		(1 * 1024)	// 0.5k eFuse, 0.5k reserved
 #define MOVI_BLKSIZE	512
 
-/*
- * XXX Define the u-boot.bin's largest block size,
- * here we assume the u-boot.bin image is less than 512k.
- */
-#define UBOOT_BLKCNT		((512)*1024/512)
+#define UBOOT_BLKCNT		(CONFIG_SYS_UBOOT_SIZE / 512)
 #define MOVI_LAST_BLKPOS	(MOVI_TOTAL_BLKCNT - (eFUSE_SIZE / MOVI_BLKSIZE))
-#define MOVI_UBOOT_POS		(MOVI_LAST_BLKPOS - UBOOT_BLKCNT)
+#define MOVI_UBOOT_POS		(MOVI_LAST_BLKPOS - UBOOT_BLKCNT - (SS_SIZE / MOVI_BLKSIZE))
 #define MOVI_INIT_REQUIRED	0
 
 void led_on(uint8_t value)

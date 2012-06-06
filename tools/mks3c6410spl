@@ -5,6 +5,7 @@ set -e
 spl=
 uboot=
 spl_size=
+uboot_size=
 page_size=
 output=
 
@@ -14,6 +15,7 @@ usage ()
 	echo -e "\t--spl u-boot-spl.bin"
 	echo -e "\t--uboot u-boot.bin"
 	echo -e "\t--spl-size size"
+	echo -e "\t--uboot-size size"
 	echo -e "\t--page-size size"
 	echo -e "\t--output file"
 }
@@ -33,6 +35,10 @@ do
 			spl_size=$2
 			shift 2
 			;;
+		--uboot-size)
+			uboot_size=$2
+			shift 2
+			;;
 		--page-size)
 			page_size=$2
 			shift 2
@@ -48,7 +54,8 @@ do
 done
 
 if [[ -z ${spl} ]] || [[ -z ${uboot} ]] || \
-   [[ -z ${spl_size} ]] || [[ -z ${page_size} ]]
+   [[ -z ${spl_size} ]] || [[ -z ${page_size} ]] || \
+   [[ -z ${uboot_size} ]]
 then
 	   usage
 	   exit 1
@@ -62,20 +69,20 @@ cp -f ${spl} spl.bin
 
 dd if=/dev/zero bs=512K count=1 2>/dev/null | tr '\0' '\377' > 0xff.bin
 
-# stage1: 10k
+# stage1:
 cat spl.bin > stage1.bin
 cat 0xff.bin >> stage1.bin
 dd if=stage1.bin of=stage1.bin.tmp bs=$((${spl_size}+${page_size})) count=1 2>/dev/null
 mv stage1.bin.tmp stage1.bin
 
-# stage2: 504k
+# stage2:
 cat ${uboot} > stage2.bin
 cat 0xff.bin >> stage2.bin
-dd if=stage2.bin of=stage2.bin.tmp bs=504K count=1 2>/dev/null
+dd if=stage2.bin of=stage2.bin.tmp bs=$((${uboot_size})) count=1 2>/dev/null
 mv stage2.bin.tmp stage2.bin
 
-# stage3: 8k
-dd if=stage1.bin of=stage3.bin bs=${spl_size} count=1 2>/dev/null
+# stage3:
+dd if=stage1.bin of=stage3.bin bs=$((${spl_size})) count=1 2>/dev/null
 
 cat stage{1,2,3}.bin > u-boot-spl.bin
 
