@@ -973,7 +973,6 @@ int readline_into_buffer(const char *const prompt, char *buffer, int timeout)
 
 #ifdef CONFIG_SHOW_ACTIVITY
 		while (!tstc()) {
-			extern void show_activity(int arg);
 			show_activity(0);
 			WATCHDOG_RESET();
 		}
@@ -1338,7 +1337,8 @@ static int builtin_run_command(const char *cmd, int flag)
 			continue;
 		}
 
-		rc = cmd_process(flag, argc, argv, &repeatable);
+		if (cmd_process(flag, argc, argv, &repeatable))
+			rc = -1;
 
 		/* Did the user stop this? */
 		if (had_ctrlc ())

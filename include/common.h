@@ -207,13 +207,6 @@ typedef void (interrupt_handler_t)(void *);
 #endif /* CONFIG_SERIAL_MULTI */
 
 /*
- * Return the time since boot in microseconds, This is needed for bootstage
- * and should be defined in CPU- or board-specific code. If undefined then
- * millisecond resolution will be used (the standard get_timer()).
- */
-ulong timer_get_boot_us(void);
-
-/*
  * General Purpose Utilities
  */
 #define min(X, Y)				\
@@ -228,6 +221,31 @@ ulong timer_get_boot_us(void);
 
 #define MIN(x, y)  min(x, y)
 #define MAX(x, y)  max(x, y)
+
+/*
+ * Return the absolute value of a number.
+ *
+ * This handles unsigned and signed longs, ints, shorts and chars.  For all
+ * input types abs() returns a signed long.
+ *
+ * For 64-bit types, use abs64()
+ */
+#define abs(x) ({						\
+		long ret;					\
+		if (sizeof(x) == sizeof(long)) {		\
+			long __x = (x);				\
+			ret = (__x < 0) ? -__x : __x;		\
+		} else {					\
+			int __x = (x);				\
+			ret = (__x < 0) ? -__x : __x;		\
+		}						\
+		ret;						\
+	})
+
+#define abs64(x) ({				\
+		s64 __x = (x);			\
+		(__x < 0) ? -__x : __x;		\
+	})
 
 #if defined(CONFIG_ENV_IS_EMBEDDED)
 #define TOTAL_MALLOC_LEN	CONFIG_SYS_MALLOC_LEN
@@ -712,13 +730,6 @@ int gunzip(void *, int, unsigned char *, unsigned long *);
 int zunzip(void *dst, int dstlen, unsigned char *src, unsigned long *lenp,
 						int stoponerr, int offset);
 
-/* lib/net_utils.c */
-#include <net.h>
-static inline IPaddr_t getenv_IPaddr (char *var)
-{
-	return (string_to_ip(getenv(var)));
-}
-
 /* lib/qsort.c */
 void qsort(void *base, size_t nmemb, size_t size,
 	   int(*compar)(const void *, const void *));
@@ -787,6 +798,13 @@ void	fputc(int file, const char c);
 int	ftstc(int file);
 int	fgetc(int file);
 
+/* lib/net_utils.c */
+#include <net.h>
+static inline IPaddr_t getenv_IPaddr(char *var)
+{
+	return string_to_ip(getenv(var));
+}
+
 /*
  * CONSOLE multiplexing.
  */
@@ -801,6 +819,10 @@ int	pcmcia_init (void);
 #endif
 
 #include <bootstage.h>
+
+#ifdef CONFIG_SHOW_ACTIVITY
+void show_activity(int arg);
+#endif
 
 /* Multicore arch functions */
 #ifdef CONFIG_MP
