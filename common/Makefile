@@ -165,7 +165,7 @@ endif
 COBJS-$(CONFIG_CMD_XIMG) += cmd_ximg.o
 COBJS-$(CONFIG_YAFFS2) += cmd_yaffs2.o
 COBJS-$(CONFIG_CMD_FASTBOOT) += cmd_fastboot.o
-COBJS-$(CONFIG_CMD_BOOTZ) += cmd_bootz.o
+COBJS-$(CONFIG_CMD_MBOOTZ) += cmd_mbootz.o
 COBJS-$(CONFIG_CMD_SPL) += cmd_spl.o
 
 # others

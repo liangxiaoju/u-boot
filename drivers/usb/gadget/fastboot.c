@@ -3,23 +3,18 @@
 #include <asm/errno.h>
 #include <asm/io.h>
 #include <linux/usb/ch9.h>
+#include <usbdescriptors.h>
 #include <linux/usb/gadget.h>
 #include <usb/lin_gadget_compat.h>
 #include "regs-otg.h"
+
+#undef DEBUG
 
 #define STRING_MANUFACTURER		1
 #define STRING_PRODUCT			2
 #define STRING_SERIALNUMBER		3
 #define STRING_CONFIG			0
 #define STRING_INTF				0
-
-//#define DEBUG
-#ifdef DEBUG
-#undef debug
-#define debug(fmt, args...) printf(fmt, ##args)
-#else
-#define debug(fmt, args...) do {} while (0)
-#endif
 
 #define BOOT_MAGIC "ANDROID!"
 #define BOOT_MAGIC_SIZE 8
@@ -28,7 +23,7 @@
 
 struct boot_img_hdr
 {
-    unsigned char magic[BOOT_MAGIC_SIZE];
+    char magic[BOOT_MAGIC_SIZE];
 
     unsigned kernel_size;  /* size in bytes */
     unsigned kernel_addr;  /* physical load addr */
@@ -43,9 +38,9 @@ struct boot_img_hdr
     unsigned page_size;    /* flash page size we assume */
     unsigned unused[2];    /* future expansion: should be 0 */
 
-    unsigned char name[BOOT_NAME_SIZE]; /* asciiz product name */
+    char name[BOOT_NAME_SIZE]; /* asciiz product name */
     
-    unsigned char cmdline[BOOT_ARGS_SIZE];
+    char cmdline[BOOT_ARGS_SIZE];
 
     unsigned id[8]; /* timestamp / checksum / sha1 / etc */
 };
