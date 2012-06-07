@@ -2,11 +2,18 @@
 
 set -e
 
+IMAGE=$(pwd)/u-boot-spl.bin
+
 if [ -b /dev/$1 ]; then
 	echo "Sdcard present."
 else
 	echo "Please insert sdcard."
-	exit 1;
+	exit 1
+fi
+
+if [ ! -f ${IMAGE} ]; then
+	echo "U-boot Image Not Found."
+	exit 1
 fi
 
 echo "Fusing sdcard ..."
@@ -15,18 +22,18 @@ SD_BLKCNT=$(cat /sys/block/$1/size)
 SD_SIZE=$((${SD_BLKCNT}*512/1024))
 echo "The total size of $1 is ${SD_SIZE}K."
 
-# define u-boot size here (10k+504k+8k)
-UBOOT_BLKCNT=$((522*1024/512))
+IMAGE_SIZE=$(stat ${IMAGE} | awk '/Size/ { print $2 }')
+UBOOT_BLKCNT=$((${IMAGE_SIZE}/512))
 
 SD_BL2_POS=$((${SD_BLKCNT}-1-1-${UBOOT_BLKCNT}))
 SDHC_BL2_POS=$((${SD_BLKCNT}-1024-1-1-${UBOOT_BLKCNT}))
 
 if [ "$SD_BLKCNT" -gt "4194304" ] ; then
 	echo "Fuse u-boot to SDHC"
-	dd if=u-boot-spl.bin of=/dev/$1 bs=512 seek=${SDHC_BL2_POS} 2>/dev/null
+	dd if=${IMAGE} of=/dev/$1 bs=512 seek=${SDHC_BL2_POS} 2>/dev/null
 else
 	echo "Fuse u-boot to SD"
-	dd if=u-boot-spl.bin of=/dev/$1 bs=512 seek=${SD_BL2_POS} 2>/dev/null
+	dd if=${IMAGE} of=/dev/$1 bs=512 seek=${SD_BL2_POS} 2>/dev/null
 fi
 
 sync

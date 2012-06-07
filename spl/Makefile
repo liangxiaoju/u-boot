@@ -132,6 +132,7 @@ $(OBJTREE)/u-boot-spl.bin: depend
 		--spl $(obj)u-boot-spl.bin \
 		--uboot $(OBJTREE)/u-boot.bin \
 		--spl-size $(CONFIG_SPL_SIZE) \
+		--uboot-size $(CONFIG_SYS_UBOOT_SIZE) \
 		--page-size $(CONFIG_SYS_NAND_PAGE_SIZE) \
 		--output $@
 endif
