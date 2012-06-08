@@ -1,0 +1,84 @@
+#!/bin/bash
+
+set -e
+
+spl=
+uboot=
+spl_size=
+uboot_size=
+output=
+
+usage ()
+{
+	echo "Usage:"
+	echo -e "\t--spl u-boot-spl.bin"
+	echo -e "\t--uboot u-boot.bin"
+	echo -e "\t--spl-size size"
+	echo -e "\t--uboot-size size"
+	echo -e "\t--output file"
+}
+
+while true
+do
+	case "$1" in
+		--spl)
+			spl=$2
+			shift 2
+			;;
+		--uboot)
+			uboot=$2
+			shift 2
+			;;
+		--spl-size)
+			spl_size=$2
+			shift 2
+			;;
+		--uboot-size)
+			uboot_size=$2
+			shift 2
+			;;
+		--output)
+			output=$2
+			shift 2
+			;;
+		*)
+			break
+			;;
+	esac
+done
+
+if [[ -z ${spl} ]] || [[ -z ${uboot} ]] || \
+   [[ -z ${spl_size} ]] || [[ -z ${uboot_size} ]]
+then
+	   usage
+	   exit 1
+fi
+
+outdir=$(dirname ${output})
+
+cd ${outdir}
+
+cp -f ${spl} spl.bin
+
+dd if=/dev/zero bs=512K count=1 2>/dev/null | tr '\0' '\377' > 0xff.bin
+
+# stage1:
+cat spl.bin > stage1.bin
+cat 0xff.bin >> stage1.bin
+dd if=stage1.bin of=stage1.bin.tmp bs=$((${spl_size})) count=1 2>/dev/null
+mv stage1.bin.tmp stage1.bin
+
+# stage2:
+cat ${uboot} > stage2.bin
+cat 0xff.bin >> stage2.bin
+dd if=stage2.bin of=stage2.bin.tmp bs=$((${uboot_size})) count=1 2>/dev/null
+mv stage2.bin.tmp stage2.bin
+
+# stage3:
+dd if=stage1.bin of=stage3.bin bs=$((${spl_size})) count=1 2>/dev/null
+
+cat stage{1,2,3}.bin > u-boot-spl.bin
+
+rm -f {spl,0xff,stage*}.bin
+
+cd -

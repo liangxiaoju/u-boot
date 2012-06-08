@@ -24,6 +24,8 @@
 	#include <asm/arch/s3c2410.h>
 #elif defined CONFIG_S3C2440
 	#include <asm/arch/s3c2440.h>
+#elif defined CONFIG_S3C2416
+	#include <asm/arch/s3c2416.h>
 #else
 	#error Please define the s3c24x0 cpu type
 #endif

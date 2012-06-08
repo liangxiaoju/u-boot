@@ -33,6 +33,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #elif defined(CONFIG_SERIAL3)
 #define UART_NR	S3C24X0_UART2
 
+#elif defined(CONFIG_SERIAL4)
+#define UART_NR	S3C24X0_UART3
+
 #else
 #error "Bad: you didn't configure serial ..."
 #endif
@@ -310,6 +313,9 @@ INIT_S3C_SERIAL_STRUCTURE(1, "s3ser1");
 DECLARE_S3C_SERIAL_FUNCTIONS(2);
 struct serial_device s3c24xx_serial2_device =
 INIT_S3C_SERIAL_STRUCTURE(2, "s3ser2");
+DECLARE_S3C_SERIAL_FUNCTIONS(3);
+struct serial_device s3c24xx_serial3_device =
+INIT_S3C_SERIAL_STRUCTURE(3, "s3ser3");
 
 __weak struct serial_device *default_serial_console(void)
 {
@@ -319,6 +325,8 @@ __weak struct serial_device *default_serial_console(void)
 	return &s3c24xx_serial1_device;
 #elif defined(CONFIG_SERIAL3)
 	return &s3c24xx_serial2_device;
+#elif defined(CONFIG_SERIAL4)
+	return &s3c24xx_serial3_device;
 #else
 #error "CONFIG_SERIAL? missing."
 #endif

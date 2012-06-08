@@ -118,6 +118,10 @@ ifdef CONFIG_S3C6410
 ALL-y	+= $(OBJTREE)/u-boot-spl.bin
 endif
 
+ifdef CONFIG_S3C2416
+ALL-y	+= $(OBJTREE)/u-boot-spl.bin
+endif
+
 all:	$(ALL-y)
 
 ifdef CONFIG_SAMSUNG
@@ -134,6 +138,16 @@ $(OBJTREE)/u-boot-spl.bin: depend
 		--spl-size $(CONFIG_SPL_SIZE) \
 		--uboot-size $(CONFIG_SYS_UBOOT_SIZE) \
 		--page-size $(CONFIG_SYS_NAND_PAGE_SIZE) \
+		--output $@
+endif
+
+ifdef CONFIG_S3C2416
+$(OBJTREE)/u-boot-spl.bin: depend
+	$(OBJTREE)/tools/mks3c2416spl \
+		--spl $(obj)u-boot-spl.bin \
+		--uboot $(OBJTREE)/u-boot.bin \
+		--spl-size $(CONFIG_SPL_SIZE) \
+		--uboot-size $(CONFIG_SYS_UBOOT_SIZE) \
 		--output $@
 endif
 
