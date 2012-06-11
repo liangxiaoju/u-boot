@@ -168,9 +168,10 @@
 
 #define CONFIG_SYS_NO_FLASH
 
-#define CONFIG_ENV_IS_NOWHERE
-#define CONFIG_ENV_ADDR			(1024*1024)
+#define CONFIG_ENV_IS_IN_MMC
+#define CONFIG_SYS_MMC_ENV_DEV		1
 #define CONFIG_ENV_SIZE			(64*1024)
+#define CONFIG_ENV_OFFSET		(1*1024)/* 32KiB - 4KiB */
 /* allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_OVERWRITE
 
@@ -198,9 +199,9 @@
 /*
  * File system
  */
-/*
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_EXT2
+/*
 #define CONFIG_CMD_UBI
 #define CONFIG_CMD_UBIFS
 #define CONFIG_CMD_MTDPARTS
@@ -237,5 +238,14 @@
 #define CONFIG_CLK_534_133_66
 #define CONFIG_CLK_267_133_66
 */
+
+/* mmc support */
+#define CONFIG_MMC
+#define CONFIG_CMD_MMC
+#define CONFIG_S3C2416_MMC
+#define CONFIG_GENERIC_MMC
+
+/* usb device */
+#define CONFIG_USB_GADGET
 
 #endif /* __CONFIG_H */

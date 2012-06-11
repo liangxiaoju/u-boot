@@ -41,17 +41,19 @@ static ulong get_PLLCLK(int pllreg)
 	ulong r, m, p, s;
 	ulong clk;
 
-	if (pllreg == MPLL)
+	if (pllreg == MPLL) {
 		r = readl(MPLLCON);
-	else if (pllreg == EPLL)
+		m = (r >> 14) & 0x3ff;
+		p = (r >> 5) & 0x3f;
+		s = r & 0x7;
+	} else if (pllreg == EPLL) {
 		r = readl(EPLLCON);
-	else {
-		for (;;) ;
+		m = (r >> 16) & 0x3ff;
+		p = (r >> 8) & 0x3f;
+		s = r & 0x7;
+	} else {
+		return 0;
 	}
-
-	m = (r >> 14) & 0x3ff;
-	p = (r >> 5) & 0x3f;
-	s = r & 0x7;
 
 	/* XXX avoid to overflow */
 	clk = m * (CONFIG_SYS_CLK_FREQ / (p << s));

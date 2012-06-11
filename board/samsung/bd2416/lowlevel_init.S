@@ -35,7 +35,7 @@
 
 #define CLK_DIV_VAL	((Startup_ARMCLKdiv<<9)|(Startup_PREdiv<<4)|(Startup_PCLKdiv<<2)|(Startup_HCLKdiv)|(1<<3))
 #define MPLL_VAL	((Startup_EPLLSTOP<<24)|(Startup_MDIV<<14)|(Startup_PDIV<<5)|(Startup_SDIV))
-#define EPLL_VAL	(32<<16)|(1<<8)|(2<<0)
+#define EPLL_VAL	(32<<16)|(1<<8)|(3<<0)
 
 #define	CFG_BANK_CFG_VAL		0x0006920d
 #define	CFG_BANK_CON1_VAL		0x04000040
@@ -117,7 +117,12 @@ system_clock_init:
 	str	r1, [r0, #EPLLCON_OFFSET]
 
 	ldr	r1, [r0, #CLKSRCCON_OFFSET]
-	orr	r1, r1, #0x40
+	bic r1, r1, #(0x3<<7)
+	orr	r1, r1, #(0x2<<7)
+	str	r1, [r0, #CLKSRCCON_OFFSET]
+
+	ldr	r1, [r0, #CLKSRCCON_OFFSET]
+	orr	r1, r1, #(1<<6)
 	str	r1, [r0, #CLKSRCCON_OFFSET]
 
 #endif

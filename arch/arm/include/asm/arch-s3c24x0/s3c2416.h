@@ -193,6 +193,7 @@ static inline struct s3c2410_sdi *s3c2410_get_base_sdi(void)
 #define CLKSRCCON_OFFSET	0x20
 #define CLKDIV0CON_OFFSET	0x24
 #define CLKDIV1CON_OFFSET	0x28
+#define CLKDIV2CON_OFFSET	0x2c
 #define HCLKCON_OFFSET		0x30
 #define PCLKCON_OFFSET		0x34
 #define SCLKCON_OFFSET		0x38
@@ -224,6 +225,7 @@ static inline struct s3c2410_sdi *s3c2410_get_base_sdi(void)
 #define CLKSRCCON	(0x4c000020)
 #define CLKDIV0CON	(0x4c000024)
 #define CLKDIV1CON	(0x4c000028)
+#define CLKDIV2CON	(0x4c00002c)
 #define HCLKCON		(0x4c000030)
 #define PCLKCON		(0x4c000034)
 #define SCLKCON		(0x4c000038)
