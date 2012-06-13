@@ -165,3 +165,30 @@ int board_mmc_init(bd_t *bis)
 	return ret;
 }
 #endif
+
+#ifdef CONFIG_FASTBOOT
+#include <fastboot.h>
+static int mini6410_flash_erase(const char *part)
+{
+	char command[64];
+
+	sprintf(command, "nand erase.part %s", part);
+	return run_command(command, 0);
+}
+static int mini6410_flash_write(void *memaddr, const char *part, int size)
+{
+	char command[64];
+
+	sprintf(command, "nand write 0x%x %s 0x%x",
+			(int)memaddr, part, size);
+	return run_command(command, 0);
+}
+static fastboot_flash_ops_t mini6410_fastboot_flash_ops = {
+	.erase		= mini6410_flash_erase,
+	.write		= mini6410_flash_write,
+};
+fastboot_flash_ops_t *get_fastboot_flash_ops(void)
+{
+	return &mini6410_fastboot_flash_ops;
+}
+#endif

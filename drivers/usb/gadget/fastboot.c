@@ -1,3 +1,6 @@
+/*
+#define DEBUG
+*/
 #include <common.h>
 #include <malloc.h>
 #include <asm/errno.h>
@@ -6,44 +9,14 @@
 #include <usbdescriptors.h>
 #include <linux/usb/gadget.h>
 #include <usb/lin_gadget_compat.h>
+#include <fastboot.h>
 #include "regs-otg.h"
-
-#undef DEBUG
 
 #define STRING_MANUFACTURER		1
 #define STRING_PRODUCT			2
 #define STRING_SERIALNUMBER		3
 #define STRING_CONFIG			0
 #define STRING_INTF				0
-
-#define BOOT_MAGIC "ANDROID!"
-#define BOOT_MAGIC_SIZE 8
-#define BOOT_NAME_SIZE 16
-#define BOOT_ARGS_SIZE 512
-
-struct boot_img_hdr
-{
-    char magic[BOOT_MAGIC_SIZE];
-
-    unsigned kernel_size;  /* size in bytes */
-    unsigned kernel_addr;  /* physical load addr */
-
-    unsigned ramdisk_size; /* size in bytes */
-    unsigned ramdisk_addr; /* physical load addr */
-
-    unsigned second_size;  /* size in bytes */
-    unsigned second_addr;  /* physical load addr */
-
-    unsigned tags_addr;    /* physical addr for kernel tags */
-    unsigned page_size;    /* flash page size we assume */
-    unsigned unused[2];    /* future expansion: should be 0 */
-
-    char name[BOOT_NAME_SIZE]; /* asciiz product name */
-    
-    char cmdline[BOOT_ARGS_SIZE];
-
-    unsigned id[8]; /* timestamp / checksum / sha1 / etc */
-};
 
 typedef int (*fastboot_handle_t)(const char *cmd);
 
@@ -62,10 +35,10 @@ typedef struct fastboot_dev {
 } fastboot_dev_t;
 
 static char manufacturer[] = "U-Boot";
-static char product_desc[] = "mini6410";
-static char config_desc[] = "update-by-usb";
+static char product_desc[] = "Board";
+static char config_desc[] = "usb-updater";
 static char intf_desc[] = "fastboot";
-static char serial_number[] = "mini6410-uboot";
+static char serial_number[] = "fastboot-uboot";
 
 /* define the start address of fastboot buffer */
 static void *fastboot_buffer_addr = (void *)CONFIG_FASTBOOT_BUFFER_ADDR;
@@ -160,6 +133,11 @@ static const struct usb_descriptor_header *fastboot_desc_header[] = {
 	NULL,
 };
 
+fastboot_flash_ops_t *default_get_fastboot_flash_ops(void) { return NULL; }
+
+fastboot_flash_ops_t *get_fastboot_flash_ops(void) __attribute__(
+		(weak, alias("default_get_fastboot_flash_ops")));
+
 static int recv_complete;
 static void fastboot_recv_complete(struct usb_ep *ep, struct usb_request *req)
 {
@@ -174,11 +152,11 @@ int fastboot_recv(void *buf, int len)
 
 	fdev->recv_req->length = len;
 	fdev->recv_req->complete = fastboot_recv_complete;
+	recv_complete = 0;
 	ret = usb_ep_queue(fdev->epout_bulk, fdev->recv_req, 0);
 	if (ret)
 		return ret;
 
-	recv_complete = 0;
 	while (!recv_complete) {
 		usb_gadget_handle_interrupts();
 
@@ -234,11 +212,11 @@ int fastboot_send(const void *buf, int len)
 	fdev->send_req->complete = fastboot_send_complete;
 	memcpy(fdev->send_req->buf, buf, len);
 
+	send_complete = 0;
 	ret = usb_ep_queue(fdev->epin_bulk, fdev->send_req, 0);
 	if (ret)
 		return ret;
 
-	send_complete = 0;
 	while (!send_complete) {
 		usb_gadget_handle_interrupts();
 
@@ -291,6 +269,7 @@ static int fastboot_reboot(const char *cmd)
 	sprintf(status, "OKAY");
 	fastboot_sends(status, sizeof(status));
 
+	printf("fastboot reboot finished.\n");
 	run_command("reset", 0);
 
 	return 0;
@@ -350,13 +329,18 @@ static int fastboot_download(const char *cmd)
 static int fastboot_flash(const char *cmd)
 {
 	int ret = 0;
-	char status[64], command[64];
+	char status[64];
 	const char *part = cmd + 6;
 	unsigned long addr;
+	fastboot_flash_ops_t *flash_ops;
 
 	printf("fastboot flash %s.\n", part);
 
 	sprintf(status, "FAIL");
+
+	flash_ops = get_fastboot_flash_ops();
+	if ((!flash_ops) || (!flash_ops->erase) || (!flash_ops->write))
+		goto out;
 
 	if (download_size > 0) {
 
@@ -367,14 +351,11 @@ static int fastboot_flash(const char *cmd)
 			goto out;
 		}
 
-		sprintf(command, "nand erase.part %s", part);
-		ret = run_command(command, 0);
+		ret = flash_ops->erase(part);
 		if (ret)
 			goto out;
 
-		sprintf(command, "nand write 0x%x %s 0x%x",
-				(unsigned)fastboot_buffer_addr, part, download_size);
-		ret = run_command(command, 0);
+		ret = flash_ops->write((void *)fastboot_buffer_addr, part, download_size);
 		if (ret)
 			goto out;
 
@@ -408,9 +389,9 @@ static int fastboot_boot(const char *cmd)
 		rsize = roundup(hdr->ramdisk_size, page_size);
 		kaddr = hdr->kernel_addr;
 		raddr = hdr->ramdisk_addr;
-		/* make sure the base address is 0x50000000 */
-		kaddr = (kaddr & (~(0xf<<28))) | (0x5<<28);
-		raddr = (raddr & (~(0xf<<28))) | (0x5<<28);
+		/* make sure the base address is the same as SDRAM_BASE */
+		kaddr = (kaddr & (~(0xf<<28))) | (CONFIG_SYS_SDRAM_BASE & (0xf<<28));
+		raddr = (raddr & (~(0xf<<28))) | (CONFIG_SYS_SDRAM_BASE & (0xf<<28));
 
 		memcpy((void *)kaddr, (void *)(hdr->magic + page_size), ksize);
 		memcpy((void *)raddr, (void *)hdr->magic + page_size + ksize, rsize);
@@ -426,7 +407,7 @@ out:
 
 	if (download_size > 0) {
 		download_size = 0;
-		sprintf(command, "bootz 0x%x 0x%x 0x%x", kaddr, raddr, hdr->ramdisk_size);
+		sprintf(command, "bootmz 0x%x 0x%x 0x%x", kaddr, raddr, hdr->ramdisk_size);
 		run_command(command, 0);
 	}
 
@@ -436,18 +417,26 @@ out:
 static int fastboot_erase(const char *cmd)
 {
 	int ret;
-	char status[64], command[64];
+	char status[64];
 	const char *part = cmd + 6;
+	fastboot_flash_ops_t *flash_ops;
 
 	printf("fastboot erase %s.\n", part);
 
-	sprintf(command, "nand erase.part %s", part);
-	ret = run_command(command, 0);
+	flash_ops = get_fastboot_flash_ops();
+	if (!flash_ops || !flash_ops->erase) {
+		sprintf(status, "FAIL");
+		ret = -1;
+		goto out;
+	}
+
+	ret = flash_ops->erase(part);
 	if (ret)
 		sprintf(status, "FAIL");
 	else
 		sprintf(status, "OKAY");
 
+out:
 	fastboot_sends(status, sizeof(status));
 
 	return ret;
@@ -570,7 +559,8 @@ static int fastboot_bind(struct usb_gadget *gadget)
 
 	pfdev = fdev;
 
-	debug("%s\n", __func__);
+	debug("%s: epin_bulk(%s), epout_bulk(%s)\n", __func__,
+			fdev->epin_bulk->name, fdev->epout_bulk->name);
 	return 0;
 
 err:
