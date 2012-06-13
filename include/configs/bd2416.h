@@ -217,6 +217,7 @@
 				GENERATED_GBL_DATA_SIZE)
 
 #define CONFIG_BOARD_EARLY_INIT_F
+#define CONFIG_BOARD_LATE_INIT
 
 #define CONFIG_SYS_IRAM_BASE    0x40004000  /* Internal SRAM base address */
 #define CONFIG_SYS_IRAM_SIZE    0x2000      /* 8 KB of internal SRAM memory */
@@ -247,5 +248,9 @@
 
 /* usb device */
 #define CONFIG_USB_GADGET
+#define CONFIG_USB_GADGET_S3C_HSUDC
+#define CONFIG_FASTBOOT
+#define CONFIG_CMD_FASTBOOT
+#define CONFIG_FASTBOOT_BUFFER_ADDR	0x32000000
 
 #endif /* __CONFIG_H */

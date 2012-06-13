@@ -30,6 +30,7 @@
 #include <mmc.h>
 #include <asm/io.h>
 #include <asm/arch/s3c24x0_cpu.h>
+#include <asm/arch/s3c-hsudc.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -40,6 +41,50 @@ DECLARE_GLOBAL_DATA_PTR;
 int board_early_init_f(void)
 {
 	return 0;
+}
+
+void hsudc_gpio_init(void)
+{
+	unsigned int value;
+
+	value = readl(MISCCR);
+	/* USB Port Normal Mode */
+	value &= ~(1<<12);
+	/* EPLL -> CLKOUT0 */
+	value &= ~(7<<4);
+	value |= (1<<4);
+	writel(value, MISCCR);
+
+	value = readl(GPHCON);
+	value &= ~(3<<26);
+	value |= 2<<26;
+	writel(value, GPHCON);
+
+	/* set GPH13 as CLKOUT */
+	value = readl(GPHPU);
+	value &= ~(3<<26);
+	writel(value, GPHPU);
+}
+
+void hsudc_gpio_uninit(void)
+{
+}
+
+struct s3c24xx_hsudc_platdata s3c_hsudc_pdata = {
+	.epnum			= 9,
+	.regs			= (void *)0x49800000,
+	.gpio_init		= hsudc_gpio_init,
+	.gpio_uninit	= hsudc_gpio_uninit,
+};
+
+int udc_init(void)
+{
+	return s3c_hsudc_probe(&s3c_hsudc_pdata);
+}
+
+int board_late_init(void)
+{
+	return udc_init();
 }
 
 int board_init(void)
@@ -154,5 +199,27 @@ int board_mmc_getcd(struct mmc *mmc)
 	}
 
 	return 1;
+}
+#endif
+
+#ifdef CONFIG_FASTBOOT
+#include <fastboot.h>
+static int bd2416_flash_erase(const char *part)
+{
+	printf("%s\n", __func__);
+	return 0;
+}
+static int bd2416_flash_write(void *memaddr, const char *part, int size)
+{
+	printf("%s\n", __func__);
+	return 0;
+}
+static fastboot_flash_ops_t bd2416_fastboot_flash_ops = {
+	.erase		= bd2416_flash_erase,
+	.write		= bd2416_flash_write,
+};
+fastboot_flash_ops_t *get_fastboot_flash_ops(void)
+{
+	return &bd2416_fastboot_flash_ops;
 }
 #endif
