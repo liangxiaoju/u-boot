@@ -319,19 +319,19 @@
 		"root=/dev/nfs rw "							\
 		"nfsroot=${serverip}:/nfs/root,tcp,nolock "	\
 		"ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}::eth0:off; "	\
-		"nfs 0x50008000 ${serverip}:/nfs/kernel; mbootz 0x50008000"
+		"nfs 0x50008000 ${serverip}:/nfs/kernel; bootmz 0x50008000"
 
 #define TFTPBOOT										\
 		"setenv bootargs "COMMON_BOOTARGS"; "			\
 		"tftpboot 0x50008000 ${serverip}:kernel; "		\
 		"tftpboot 0x51000000 ${serverip}:rootfs; "		\
-		"mbootz 0x50008000 0x51000000"
+		"bootmz 0x50008000 0x51000000"
 
 #define RAMFSBOOT									\
 		"setenv bootargs "COMMON_BOOTARGS"; "		\
 		"nand read 0x50008000 kernel 0x280000; "	\
 		"nand read 0x51000000 ramdisk 0x400000; "	\
-		"mbootz 0x50008000 0x51000000"
+		"bootmz 0x50008000 0x51000000"
 
 #define CONFIG_EXTRA_ENV_SETTINGS			\
 		"mtdparts="MTDPARTS_DEFAULT"\0"		\
@@ -346,7 +346,7 @@
 #define CONFIG_CMD_FASTBOOT
 #define CONFIG_FASTBOOT_BUFFER_ADDR	0x52000000
 #define CONFIG_FASTBOOT
-#define CONFIG_CMD_MBOOTZ
+#define CONFIG_CMD_BOOTMZ
 #define CONFIG_BOARD_LATE_INIT
 #define CONFIG_GENERIC_MMC
 /* #define CONFIG_SDHCI */

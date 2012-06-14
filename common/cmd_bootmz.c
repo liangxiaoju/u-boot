@@ -7,7 +7,7 @@ typedef int boot_os_fn(int flag, int argc, char * const argv[],
 
 extern boot_os_fn do_bootm_linux;
 
-int do_mbootz(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_bootmz(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	char command[64];
 	boot_os_fn	*boot_fn;
@@ -60,7 +60,7 @@ int do_mbootz(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 }
 
 U_BOOT_CMD(
-	mbootz, 4, 0, do_mbootz,
+	bootmz, 4, 0, do_bootmz,
 	"boot zImage",
 	"kernel ramdisk [ramdisk_size]"
 );
