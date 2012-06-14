@@ -91,7 +91,7 @@ int board_late_init(void)
 int board_init(void)
 {
 	/* arch number of SMDK2416-Board */
-	gd->bd->bi_arch_number = MACH_TYPE_SMDK2416;
+	gd->bd->bi_arch_number = 1827;
 
 	/* adress of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM_1 + 0x100;
@@ -274,7 +274,7 @@ static int bd2416_flash_write(void *memaddr, const char *part, int size)
 		info.start = pos;
 	}
 
-	cnt = min(info.size, size/mmc->block_dev.blksz);
+	cnt = min(info.size, (size+mmc->block_dev.blksz-1)/mmc->block_dev.blksz);
 
 	printf("Flashing %s ...\n", part);
 	n = mmc->block_dev.block_write(curr_device, info.start, cnt, memaddr);

@@ -104,6 +104,7 @@
 /*
 #define CONFIG_CMD_USB
 */
+#define CONFIG_CMD_BOOTMZ
 
 #define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
@@ -253,5 +254,14 @@
 #define CONFIG_FASTBOOT
 #define CONFIG_CMD_FASTBOOT
 #define CONFIG_FASTBOOT_BUFFER_ADDR	0x32000000
+
+#define CONFIG_BOOTCOMMAND						\
+	"mmc dev 2; "								\
+	"mmc read 0x30008000 0x003A9000 0x5000; "	\
+	"mmc read 0x31000000 0x003A4000 0x5000; "	\
+	"bootmz 0x30008000 0x31000000"
+
+#define CONFIG_BOOTARGS							\
+	"root=/dev/ram0 console=ttySAC3,115200"
 
 #endif /* __CONFIG_H */
