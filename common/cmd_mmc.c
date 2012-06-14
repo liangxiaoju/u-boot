@@ -111,6 +111,7 @@ static void print_mmcinfo(struct mmc *mmc)
 	printf("High Capacity: %s\n", mmc->high_capacity ? "Yes" : "No");
 	puts("Capacity: ");
 	print_size(mmc->capacity, "\n");
+	printf("capacity=%llu\n", mmc->capacity);
 
 	printf("Bus Width: %d-bit\n", mmc->bus_width);
 }

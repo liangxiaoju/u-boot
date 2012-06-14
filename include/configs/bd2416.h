@@ -66,6 +66,7 @@
 */
 #define CONFIG_USB_STORAGE
 #define CONFIG_DOS_PARTITION
+#define CONFIG_EFI_PARTITION
 
 /************************************************************
  * RTC

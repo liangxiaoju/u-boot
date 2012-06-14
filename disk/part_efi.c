@@ -433,4 +433,52 @@ static int is_pte_valid(gpt_entry * pte)
 		return 1;
 	}
 }
+
+int get_partition_info_efi_by_name(block_dev_desc_t * dev_desc, const char *name,
+				disk_partition_t * info)
+{
+	ALLOC_CACHE_ALIGN_BUFFER(gpt_header, gpt_head, 1);
+	gpt_entry *gpt_pte = NULL;
+	int part = -1;
+	int i;
+
+	if (!dev_desc || !info) {
+		printf("%s: Invalid Argument(s)\n", __func__);
+		return -1;
+	}
+
+	/* This function validates AND fills in the GPT header and PTE */
+	if (is_gpt_valid(dev_desc, GPT_PRIMARY_PARTITION_TABLE_LBA,
+			gpt_head, &gpt_pte) != 1) {
+		printf("%s: *** ERROR: Invalid GPT ***\n", __func__);
+		return -1;
+	}
+
+	for (i = 0; i < le32_to_int(gpt_head->num_partition_entries); i++) {
+		if (!strcmp(name, print_efiname(&gpt_pte[i]))) {
+			part = i;
+		}
+	}
+
+	if (part >= 0) {
+		/* The ulong casting limits the maximum disk size to 2 TB */
+		info->start = (ulong) le64_to_int(gpt_pte[part].starting_lba);
+		/* The ending LBA is inclusive, to calculate size, add 1 to it */
+		info->size = ((ulong)le64_to_int(gpt_pte[part].ending_lba) + 1)
+				 - info->start;
+		info->blksz = GPT_BLOCK_SIZE;
+
+		sprintf((char *)info->name, "%s",
+				print_efiname(&gpt_pte[part]));
+		sprintf((char *)info->type, "U-Boot");
+
+		debug("%s: start 0x%lX, size 0x%lX, name %s", __func__,
+			info->start, info->size, info->name);
+	}
+
+	/* Remember to free pte */
+	free(gpt_pte);
+	return part;
+}
+
 #endif

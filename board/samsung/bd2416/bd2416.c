@@ -28,6 +28,7 @@
 #include <common.h>
 #include <netdev.h>
 #include <mmc.h>
+#include <part.h>
 #include <asm/io.h>
 #include <asm/arch/s3c24x0_cpu.h>
 #include <asm/arch/s3c-hsudc.h>
@@ -204,15 +205,85 @@ int board_mmc_getcd(struct mmc *mmc)
 
 #ifdef CONFIG_FASTBOOT
 #include <fastboot.h>
+/* XXX use mmc 2 for test */
+#define FASTBOOT_MMC_DEV	2
+extern int get_partition_info_efi_by_name(block_dev_desc_t * dev_desc,
+		const char *name, disk_partition_t * info);
 static int bd2416_flash_erase(const char *part)
 {
-	printf("%s\n", __func__);
-	return 0;
+	struct mmc *mmc;
+	disk_partition_t info;
+	int curr_device = FASTBOOT_MMC_DEV;
+	ulong n;
+	int ret;
+
+	mmc = find_mmc_device(curr_device);
+	if (!mmc)
+		return -1;
+	mmc_init(mmc);
+
+	ret = get_partition_info_efi_by_name(&mmc->block_dev, part, &info);
+	if (ret < 0) {
+		printf("Cannot find %s partition.\n", part);
+		return -1;
+	}
+
+	/* maybe it does not need to erase */
+	printf("Erasing %s ...\n", part);
+	/*
+	n = mmc->block_dev.block_erase(curr_device, info.start, info.size);
+	*/
+	n = info.size;
+	printf("Erase %s[%u - %u] %s.\n", part,
+			info.start, info.start+info.size-1, (n==info.size) ? "OK" : "Failed");
+
+	ret = (n==info.size) ? 0 : -1;
+
+	return ret;
 }
 static int bd2416_flash_write(void *memaddr, const char *part, int size)
 {
-	printf("%s\n", __func__);
-	return 0;
+	struct mmc *mmc;
+	disk_partition_t info;
+	ulong last_blk, pos, cnt, n;
+	int curr_device = FASTBOOT_MMC_DEV;
+	int ret;
+
+	mmc = find_mmc_device(curr_device);
+	if (!mmc)
+		return -1;
+	mmc_init(mmc);
+
+	ret = get_partition_info_efi_by_name(&mmc->block_dev, part, &info);
+	if (ret < 0) {
+		printf("Cannot find %s partition.\n", part);
+		return -1;
+	}
+
+	/*
+	 * do some special thing for bootloader,
+	 * because the bootloader partition occupy the GPT backup header,
+	 * so the bootloader partition's start and size is not correct,
+	 * we have to calculate ourself.
+	 */
+	if (!strcmp(part, "bootloader")) {
+		last_blk = mmc->block_dev.lba;
+		if (mmc->high_capacity)
+			last_blk -= 1024;
+		pos = last_blk - 2 - size/mmc->block_dev.blksz;
+		info.start = pos;
+	}
+
+	cnt = min(info.size, size/mmc->block_dev.blksz);
+
+	printf("Flashing %s ...\n", part);
+	n = mmc->block_dev.block_write(curr_device, info.start, cnt, memaddr);
+	printf("Flash %s[%u - %u] %s.\n", part,
+			info.start, info.start+cnt-1, (n==cnt) ? "OK" : "Failed");
+
+	ret = (n==cnt) ? 0 : -1;
+
+	return ret;
 }
 static fastboot_flash_ops_t bd2416_fastboot_flash_ops = {
 	.erase		= bd2416_flash_erase,
